@@ -1,5 +1,5 @@
 #!/bin/bash
-#rm temp.out #DEBUG
+
 # Solvate.sh: Solvate each frame with target number of waters
 CPPTRAJ=`which cpptraj`
 if [ -z "$CPPTRAJ" ] ; then
