@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+#gauss_lib_geb.pl: Generate AMBER FF Parameters from Ligands in Seperate .PDB Files
 use warnings;
 use 5.010;
 use Module::Load;
