@@ -11,7 +11,7 @@ module("load openbabel/2.4.1"); # OpenBabel
 module("load gaussian16/SSE4.C01"); # Gaussian16
 
 # Set Working Directory Here
-$home = '/uufs/chpc.utah.edu/common/home/cheatham-group7/nate/barrios22/SHP_1/QM';
+$home = '/';
 opendir(DIR, $home) or die "Could not open $home\n";
 
 # Make Directory For Each File
