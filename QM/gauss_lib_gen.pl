@@ -54,7 +54,7 @@ foreach my $newdirectory ( <$home/*> )
 			open my $in,  '<', $com  or die "Can't read COM file: $!";
 			open my $out, '>', $opt  or die "Can't write OPT file: $!";
 
-			print $out "%chk=$file.$extensions[4]\n#P B3LYP/6-31G* Opt Freq=NoRaman\n$opt\n\n";
+			print $out "%chk=$file$extensions[4]\n#P B3LYP/6-31G* Opt Freq=NoRaman\n$opt\n\n";
 			while( <$in> )
     			{
 				next if $. <= 4;
@@ -66,7 +66,7 @@ foreach my $newdirectory ( <$home/*> )
 			open my $in,  '<', $com    or die "Can't read COM file: $!";
 			open my $out, '>', $charge or die "Can't write CHARGE file: $!";
 
-			print $out "%chk=$file.$extensions[5]\n#P HF/6-31G* Pop=MK iop(6/33=2,6/41=10,6/42=6) nosym Test\n\n$charge\n\n";	
+			print $out "%chk=$file$extensions[5]\n#P HF/6-31G* Pop=MK iop(6/33=2,6/41=10,6/42=6) nosym Test\n\n$charge\n\n";	
 			while( <$in> )
     			{
 				next if $. <= 4;
