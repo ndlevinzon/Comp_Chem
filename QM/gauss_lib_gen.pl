@@ -11,7 +11,6 @@ module("load gaussian16/SSE4.C01"); # Gaussian16
 
 # Set Working Directory Here
 $home = '/uufs/chpc.utah.edu/common/home/cheatham-group7/nate/barrios22/SHP_1/QM';
-
 opendir(DIR, $home) or die "Could not open $home\n";
 
 # Make Directory For Each File
@@ -22,7 +21,6 @@ foreach my $filename (<*.pdb>)
 	{
   		system("mkdir $without_extension");
   		print "Making Directory: $without_extension\n";
-
   		system("mv $filename $without_extension");
   		print "Moving File: $filename\n";
 	}
@@ -34,7 +32,6 @@ foreach my $newdirectory ( <$home/*> )
 	{
 		chdir( $newdirectory ) or die "Couldn't go inside $newdirectory directory, $!";
 		print "Current Working Directory is $newdirectory\n";
-
 		foreach my $pdbfile ( glob  "$newdirectory/*.pdb" ) 
 		{
 			($file,$dir,$ext) = fileparse($pdbfile, qr/\.[^.]*/);
@@ -49,11 +46,9 @@ foreach my $newdirectory ( <$home/*> )
 			{
 				system("obabel -ipdb $pdb -ocom $com -m");
 			}
-
 			# Create GeomOpt Gaussian Input
 			open my $in,  '<', $com  or die "Can't read COM file: $!";
 			open my $out, '>', $opt  or die "Can't write OPT file: $!";
-
 			print $out "%chk=$file$extensions[4]\n#P B3LYP/6-31G* Opt Freq=NoRaman\n$opt\n\n";
 			while( <$in> )
     			{
@@ -65,7 +60,6 @@ foreach my $newdirectory ( <$home/*> )
 			# Create Charge Gaussian Input
 			open my $in,  '<', $com    or die "Can't read COM file: $!";
 			open my $out, '>', $charge or die "Can't write CHARGE file: $!";
-
 			print $out "%chk=$file$extensions[5]\n#P HF/6-31G* Pop=MK iop(6/33=2,6/41=10,6/42=6) nosym Test\n\n$charge\n\n";	
 			while( <$in> )
     			{
