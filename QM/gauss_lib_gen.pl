@@ -4,9 +4,10 @@ use 5.010;
 use Module::Load;
 use File::Basename;
 
+# Modules
 require "$ENV{\"LMOD_PKG\"}/init/perl";
-module("load openbabel/2.4.1");
-module("load gaussian16/SSE4.C01"); 
+module("load openbabel/2.4.1"); # OpenBabel
+module("load gaussian16/SSE4.C01"); # Gaussian16
 
 # Set Working Directory Here
 $home = '/uufs/chpc.utah.edu/common/home/cheatham-group7/nate/barrios22/SHP_1/QM';
