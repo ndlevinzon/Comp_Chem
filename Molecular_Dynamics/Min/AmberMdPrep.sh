@@ -1,10 +1,5 @@
 #!/bin/bash
-
-# AmberMdPrep.sh
-# Wrapper script for preparing explicitly solvated systems for MD with Amber.
-# Daniel R. Roe
-# NIH/NHLBI
-# 2020-08-07
+# AmberMdPrep.sh: Wrapper Script for Preparing Explicitly Solvated Systems for MD with AMBER.
 
 VERSION='0.3 (beta)'
 MPIRUN=`which mpirun`
