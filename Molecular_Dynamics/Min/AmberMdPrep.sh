@@ -16,37 +16,36 @@ S=0
 TYPE=''
 HEAVYMASK=''
 BACKBONEMASK=''
-ADDITIONALMASK='' # Additional mask to use during steps 1-8
-PRODUCTIONMASK='' # Additional mask to use steps 9 and above
-PRODUCTIONWT=''   # Restraint weight to use for production mask
-PRODUCTIONREF=''  # Reference structure to use for production mask
-ADDEDRES=''       # Residue names that if present will be added to heavy masks
-MASTERCUT=''      # If set, override default cutoff
+ADDITIONALMASK=''       # Additional Mask to Use During Steps 1-8
+PRODUCTIONMASK=''       # Additional Mask to Use Steps 9 and Above
+PRODUCTIONWT=''         # Restraint Weight to Use for Production Mask
+PRODUCTIONREF=''        # Reference Structure to Use for Production Mask
+ADDEDRES=''             # Residue Names that, if present, will be Added to Heavy Masks
+MASTERCUT=''            # If Set, Override Default Cutoff
 TEMP0=''
 TEMPI=''
-NPROCS=''  # Number of processes to use for CPU jobs
+NPROCS=''               # Number of Processes to Use for CPU Jobs
 OVERWRITE=0
-CHARMMWATERFLAG=0 # Set when charmm water present
-NPROTEIN=0 # Number of protein residues
-NDNA=0     # Number of DNA residues
-NRNA=0     # Number of RNA residues
-NLIPID=0   # Number of lipid residues
-NCARBO=0   # Number of carbohydrate residues
-NUNKNOWN=0 # Number of unknown residues
+CHARMMWATERFLAG=0       # Set when CHARMM Water Present
+NPROTEIN=0              # Number of Protein Residues
+NDNA=0                  # Number of DNA Residues
+NRNA=0                  # Number of RNA Residues
+NLIPID=0                # Number of Lipid Residues
+NCARBO=0                # Number of Carbohydrate Residues
+NUNKNOWN=0              # Number of Unknown Residues
 NCHARMMWATER=0
 NWATER=0
-LIPIDRESNAMES=''       # Comma-separated list of unique lipid residue names
-THERMOTYPE='langevin'   # Thermostat type
-BAROTYPE='montecarlo'   # Barostat type
-FINALTHERMO='langevin'  # Thermostat for final density eq.
-FINALBARO='montecarlo'  # Barostat for final density eq.
-NTPFLAG=1 # 1 for isotropic scaling, 2 for anisotropic
+LIPIDRESNAMES=''        # Comma-Separated List of Unique Lipid Residue Names
+THERMOTYPE='langevin'   # Thermostat Type
+BAROTYPE='montecarlo'   # Barostat Type
+FINALTHERMO='langevin'  # Thermostat for Final Density Eq.
+FINALBARO='montecarlo'  # Barostat for Final Density Eq.
+NTPFLAG=1               # 1 for Isotropic Scaling, 2 for Anisotropic
 STATUSFILE=''
 
 # ------------------------------------------------------------------------------
 # DetectSystemType <topology file>
-# Use cpptraj to print out residues from a topology file. Determine the
-# type of each residue and keep track.
+# Use cpptraj to print out residues from a topology file. Determine the type of each residue and keep track.
 DetectSystemType() {
   if [ -z "$CPPTRAJ" ] ; then
     echo "Error. Topology detection relies on cpptraj, which is not present."
@@ -385,7 +384,7 @@ Help() {
 # ==============================================================================
 
 echo "AmberMdPrep.sh Version $VERSION"
-# Parse command line options
+# Parse Command Line Options
 while [ ! -z "$1" ] ; do
   case "$1" in
     '-p'            ) shift ; TOP=$1 ;;
