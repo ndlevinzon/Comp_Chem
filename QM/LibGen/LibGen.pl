@@ -11,6 +11,7 @@ module("load openbabel/2.4.1");                                 # OpenBabel Modu
 module("load gaussian16/SSE4.C01");                             # Gaussian Module
 module("load gcc/8.5.0 intel-oneapi-mpi/2021.4.0 amber/20.20"); # AMBER Module
 
+
 # Set Working Directory Here
 $home = '';
 opendir(DIR, $home) or die "Could not open $home\n";
@@ -34,6 +35,7 @@ foreach my $newdirectory ( <$home/*> )
 	{
 		chdir( $newdirectory ) or die "Couldn't go inside $newdirectory directory, $!";
 		print "Current Working Directory is $newdirectory\n";
+
 		foreach my $pdbfile ( glob  "$newdirectory/*.pdb" ) 
 		{
 			($file,$dir,$ext) = fileparse($pdbfile, qr/\.[^.]*/);
@@ -49,17 +51,19 @@ foreach my $newdirectory ( <$home/*> )
 			my $frcmod          = $file.$extensions[8];
 			my $tleap           = $file.$extensions[9];
 			my $lib             = $file.$extensions[10];
+
 			# Convert .PDB to .COM
 			if (! -f $com)
 			{
 				system("obabel -ipdb $pdb -ocom $com -m");
 			}
+
 			# Create GeomOpt Gaussian Input
 			if (! -f $opt_check)
 			{
 				open my $in,  '<', $com  or die "Can't read COM file: $!";
 				open my $out, '>', $opt  or die "Can't write OPT file: $!";
-				print $out "%chk=$opt_check\n#P B3LYP/6-31G* Opt Freq=NoRaman\n$opt\n\n";
+				print $out "%chk=$opt_check\n#P B3LYP/6-31G* Opt Freq=NoRaman\n\n$opt\n\n";
 				while( <$in> )
     				{
 					next if $. <= 4;
@@ -67,12 +71,13 @@ foreach my $newdirectory ( <$home/*> )
    				}
 				close $out;
 			}
+
 			# Create Charge Gaussian Input
 			if (! -f $charge_check)
 			{
 				open my $in,  '<', $com    or die "Can't read COM file: $!";
 				open my $out, '>', $charge or die "Can't write CHARGE file: $!";
-				print $out "%chk=$charge_check\n#P HF/6-31G* Pop=MK iop(6/33=2,6/41=10,6/42=6) nosym Test\n\n$charge\n\n";	
+				print $out "%chk=$charge_check\n#P HF/6-31G* Pop=MK iop(6/33=2,6/42=6) pop=mk scf=tight Test\n\n$charge\n\n";	
 				while( <$in> )
     				{
 					next if $. <= 4;
@@ -87,14 +92,30 @@ foreach my $newdirectory ( <$home/*> )
 				system("g16 $opt");
 				system("g16 $charge");
 			}
+			
+			# Get Charge from Gaussian .COM
+			open my $in,  '<', $com  or die "Can't read COM file: $!";
+			my $start_line = 5;
+			while( <$in> )
+    			{
+				if( $. == $start_line ) 
+				{ 
+       				$line = $_;
+					my @charge_spin = split('', $line, length($line));			
+					$charge = $charge_spin[0].$charge_spin[1];
+        			last;
+				}
+   			}
+			close $in;
+
 			# Run AMBER Antechamber
-			if (! -f $lib)
+			if (! -e $lib)
 			{
-				system("antechamber -i $log -fi gout -o $mol2 -fo mol2 -c resp -nc 1");
+				system("antechamber -i $log -fi gout -o $mol2 -fo mol2 -c resp -nc $charge");
 				system("parmchk2 -i $mol2 -f mol2 -o $frcmod");
 				open my $tLEAP, '>', $tleap or die "Can't write tLEAP input file: $!";
 				print $tLEAP "source leaprc.gaff\nloadamberparams $frcmod\nlig = loadmol2 $mol2\ncheck lig\nsaveoff lig $lib\nquit";
-				close $out;
+				close $tLEAP;
 				system("tleap -f $tleap");
 			}
 		}
