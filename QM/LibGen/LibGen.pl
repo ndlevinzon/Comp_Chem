@@ -109,10 +109,10 @@ foreach my $newdirectory ( <$home/*> )
     			{
 				if( $. == $start_line ) 
 				{ 
-       				$line = $_;
+       					$line = $_;
 					my @charge_spin = split('', $line, length($line));			
 					$charge = $charge_spin[0].$charge_spin[1];
-        			last;
+        				last;
 				}
    			}
 			close $in;
