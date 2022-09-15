@@ -5,15 +5,15 @@ use 5.010;
 use Module::Load;
 use File::Basename;
 
-# Modules
-require "$ENV{\"LMOD_PKG\"}/init/perl";                        
-module("load openbabel/2.4.1");                                 # OpenBabel Module
-module("load gaussian16/SSE4.C01");                             # Gaussian Module
-module("load gcc/8.5.0 intel-oneapi-mpi/2021.4.0 amber/20.20"); # AMBER Module
+require "$ENV{\"LMOD_PKG\"}/init/perl";
+module("load openbabel/2.4.1");
+module("load gaussian16/SSE4.C01"); 
+module("load gcc/8.5.0 intel-oneapi-mpi/2021.4.0 amber/20.20");
 
 
 # Set Working Directory Here
-$home = '';
+$home = '/uufs/chpc.utah.edu/common/home/cheatham-group7/nate/barrios22/SHP_1/QM';
+
 opendir(DIR, $home) or die "Could not open $home\n";
 
 # Make Directory For Each File
@@ -52,14 +52,16 @@ foreach my $newdirectory ( <$home/*> )
 			my $tleap           = $file.$extensions[9];
 			my $lib             = $file.$extensions[10];
 
+
+
 			# Convert .PDB to .COM
-			if (! -f $com)
+			if (! -e $com)
 			{
 				system("obabel -ipdb $pdb -ocom $com -m");
 			}
 
 			# Create GeomOpt Gaussian Input
-			if (! -f $opt_check)
+			if (! -e $opt_check)
 			{
 				open my $in,  '<', $com  or die "Can't read COM file: $!";
 				open my $out, '>', $opt  or die "Can't write OPT file: $!";
@@ -73,7 +75,7 @@ foreach my $newdirectory ( <$home/*> )
 			}
 
 			# Create Charge Gaussian Input
-			if (! -f $charge_check)
+			if (! -e $charge_check)
 			{
 				open my $in,  '<', $com    or die "Can't read COM file: $!";
 				open my $out, '>', $charge or die "Can't write CHARGE file: $!";
@@ -87,11 +89,20 @@ foreach my $newdirectory ( <$home/*> )
 			}
 			
 			# Run Gaussian
-			if (! -f $log)
+			if (! -e $log)
 			{
 				system("g16 $opt");
 				system("g16 $charge");
 			}
+
+			# Get Charge from Gaussian .COM
+			open my $in,  '<', $com  or die "Can't read COM file: $!";
+			while( <$in> )
+    			{
+				next unless 5 .. undef;
+				my @spin_charge = split('', $_, length($_))			
+   				}
+			close $in;
 			
 			# Get Charge from Gaussian .COM
 			open my $in,  '<', $com  or die "Can't read COM file: $!";
@@ -134,4 +145,4 @@ exit;
 #   +#+ +:+ +#+ +#+    +:+ +#+               +#+    +#+   +:+     +#+        +#+      #
 #  +#+  +#+#+# +#+    +#+ +#+             +#+      +#+   +#+   +#+        +#+         #
 # #+#   #+#+# #+#    #+# #+#            #+#       #+#   #+#  #+#        #+#           #
-####    #### #########  ##########    ##########  #######  ########## ##########      #
+####    #### #########  ##########    ##########  #######  ########## ##########      #  
