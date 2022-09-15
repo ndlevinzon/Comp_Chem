@@ -5,15 +5,15 @@ use 5.010;
 use Module::Load;
 use File::Basename;
 
+# Load Modules
 require "$ENV{\"LMOD_PKG\"}/init/perl";
-module("load openbabel/2.4.1");
-module("load gaussian16/SSE4.C01"); 
-module("load gcc/8.5.0 intel-oneapi-mpi/2021.4.0 amber/20.20");
+module("load openbabel/2.4.1");                                 # OpenBabel
+module("load gaussian16/SSE4.C01");                             # GAUSSIAN
+module("load gcc/8.5.0 intel-oneapi-mpi/2021.4.0 amber/20.20"); # AMBER
 
 
 # Set Working Directory Here
-$home = '/uufs/chpc.utah.edu/common/home/cheatham-group7/nate/barrios22/SHP_1/QM';
-
+$home = '';
 opendir(DIR, $home) or die "Could not open $home\n";
 
 # Make Directory For Each File
