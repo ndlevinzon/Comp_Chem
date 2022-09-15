@@ -52,8 +52,6 @@ foreach my $newdirectory ( <$home/*> )
 			my $tleap           = $file.$extensions[9];
 			my $lib             = $file.$extensions[10];
 
-
-
 			# Convert .PDB to .COM
 			if (! -e $com)
 			{
