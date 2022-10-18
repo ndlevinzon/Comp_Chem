@@ -1,5 +1,5 @@
 # AmberMdPrep.sh
-Wrapper script for Amber's LEaP ('tleap') to solvate a system with specific number of water molecules. Also makes use of cpptraj for determining molecule info.
+Wrapper Script for Preparing Explicitly Solvated Systems for MD with AMBER
 
 # Usage
 ```
