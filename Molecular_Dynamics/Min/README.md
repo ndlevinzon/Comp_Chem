@@ -32,6 +32,6 @@ Input File Options:
     --keyhelp            : Print help for recognized input file keys
     --statusfile <file>  : Status file for final density eq
   Environment vars:
-    PROG_MIN : Command for minimization steps
-    PROG_MD  : Command for MD steps
+    PROG_MIN             : Command for minimization steps
+    PROG_MD              : Command for MD steps
 ```
