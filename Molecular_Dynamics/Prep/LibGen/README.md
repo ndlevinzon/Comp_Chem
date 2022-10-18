@@ -2,9 +2,8 @@
 Script that takes a directory filled with ligand .PDB files, runs Gaussian16 geometry/charge optimization, and generates AMBER-compatible ligand parameters for use in Molecular Dynamics simulations
 
 # Usage
-Change directory to the one containing ligand .PDB files and begin the script
 ```
-perl LibGen.pl
+LibGen.pl
 ```
 If needed, open LibGen.pl in a text editor and change the following lines in order to match the dependencies within your UNIX environment
 ```
