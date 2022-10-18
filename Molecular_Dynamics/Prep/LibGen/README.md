@@ -9,3 +9,7 @@ require "$ENV{\"LMOD_PKG\"}/init/perl";
 module("load openbabel/2.4.1");                                 # OpenBabel
 module("load gaussian16/SSE4.C01");                             # GAUSSIAN
 module("load gcc/8.5.0 intel-oneapi-mpi/2021.4.0 amber/20.20"); # AMBER
+```
+Change directory to the one containing ligand .PDB files and begin the script
+```
+perl LibGen.pl
