@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from rdkit import Chem, DataStructs
 from rdkit.Chem import rdMolDescriptors
+from scipy.stats import t
+from scipy.optimize import curve_fit
 
 
 def readCSV(csv_file):
@@ -169,6 +171,9 @@ def main():
 
 ########################################################################################################################
 
+    # 0. Convert units of potency from nM to M
+    df['Potency_Converted'] = df['Potency'] * 1e-9
+
     # 1. Create a dictionary to map molecule ID numbers to their corresponding cluster number
     cluster_mapping = {}
     cluster_counter = 1
@@ -183,43 +188,118 @@ def main():
     # 3. Create the 'cluster' column in the DataFrame based on the cluster mapping
     df['Cluster'] = df.index.map(cluster_mapping)
 
-    print(df)
-
     # 4. Group the DataFrame by the 'Cluster' column
     grouped = df.groupby('Cluster')
 
     # 5. Iterate over each cluster
     for cluster, group in grouped:
-        
+
         # Exclude clusters with less than 5 members
         if len(group) < 5:
             continue
 
+        # Drop entries with NaN potency values
+        group = group.dropna(subset=['Potency_Converted'])
+
         # Sort the group by potency in ascending order
-        sorted_group = group.sort_values('Potency')
+        sorted_group = group.sort_values('Potency_Converted')
 
-        # Calculate the cumulative sum of molecules with lower potency within the cluster
-        cumulative_sum = np.arange(1, len(sorted_group) + 1) / len(sorted_group)
+        # Calculate the proportion for each molecule in the cluster
+        proportion = np.arange(1, len(sorted_group) + 1) / len(sorted_group)
 
-        # Plot the cumulative sum against the -log(potency) values
-        plt.plot(-np.log(sorted_group['Potency']), cumulative_sum, label=f'Cluster {cluster}')
+        # Assign the proportion values to the 'Proportion' column
+        df.loc[sorted_group.index, 'Proportion'] = proportion
 
-    # 6. Set labels for the axes, show the plot
-    plt.xlabel('-log(Potency)')
+    # 6. Exclude entries with NaN values from subsequent calculations
+    df = df.dropna()
+
+    # 7a. Perform linear regression using all data points
+    x_data = df['Potency_Converted']
+    y_data = df['Proportion']
+    slope, intercept = np.polyfit(x_data, y_data, deg=1)
+    x_fit = np.linspace(min(x_data), max(x_data), 100)
+    y_fit_linear = slope * x_fit + intercept
+
+    # 7b. Estimate initial parameters for sigmoid function
+    x_min = min(x_data)
+    a_init = 10
+    b_init = x_min
+    c_init = 10
+
+    # 7c. Fit a sigmoid function to the data
+    def sigmoid(x, a, b, c):
+        return c / (1 + np.exp(-a * (x - b)))
+
+    params, _ = curve_fit(sigmoid, x_data, y_data, p0=[a_init, b_init, c_init])
+
+    a, b, c = params
+    y_fit_sigmoid = sigmoid(x_fit, a, b, c)
+
+    # 8a. Calculate standard error of the estimate
+    y_pred = slope * x_data + intercept
+    error = y_data - y_pred
+    mse = np.mean(error ** 2)
+    se = np.sqrt(mse)
+
+    # 8b. Calculate upper and lower bounds of the confidence band
+    confidence = 0.95
+    n = len(x_data)
+    t_value = t.ppf((1 + confidence) / 2, n - 2)
+    confidence_band = t_value * se
+
+    isLogarithmic = True
+    # 9. Set the x-axis values based on isLogarithmic variable
+    if isLogarithmic:
+        x_data_plot = -np.log10(x_data)
+        x_fit_plot = -np.log10(x_fit)
+        x_label = '-log(Potency) (M)'
+    else:
+        x_data_plot = x_data
+        x_fit_plot = x_fit
+        x_label = 'Potency (M)'
+
+    # 10. Plot the cumulative sum against the potency values
+    plt.scatter(x_data_plot, y_data, c=df['Cluster'], label='Clusters')
+
+    isSigmoid = False
+    # 11. Plot the regression line based on isSigmoid variable
+    if isSigmoid:
+        # Plot the sigmoid curve
+        plt.plot(x_fit_plot, y_fit_sigmoid, 'r-', label='Sigmoid Fit')
+
+        # Add the confidence interval to the sigmoid curve
+        x_fit_upper = sigmoid(x_fit, a + confidence_band, b, c)
+        x_fit_lower = sigmoid(x_fit, a - confidence_band, b, c)
+        plt.fill_between(x_fit_plot, x_fit_lower, x_fit_upper, color='gray', alpha=0.3)
+    else:
+        # Plot the linear regression line
+        plt.plot(x_fit_plot, y_fit_linear, 'r--',
+                 label=f'Linear Regression: y = {slope:.3g}x + {intercept:.3g}')
+
+        # Calculate the confidence curve for linear regression
+        y_fit_upper = y_fit_linear + confidence_band
+        y_fit_lower = y_fit_linear - confidence_band
+
+        # Plot the confidence curve for linear regression
+        plt.plot(x_fit_plot, y_fit_upper, 'b--', label='95% Confidence')
+        plt.plot(x_fit_plot, y_fit_lower, 'b--')
+
+        plt.fill_between(x_fit_plot, y_fit_upper, y_fit_lower, color='gray', alpha=0.3)
+
+        #  Calculate correlation coefficient
+        correlation_coefficient = np.corrcoef(x_data, y_data)[0, 1]
+
+        # Include the correlation coefficient in the legend
+        plt.legend(title=f'Correlation Coefficient: {correlation_coefficient:.3f}')
+
+    # 12a. Set the x-axis limits
+    plt.xlim(min(x_data_plot), max(x_data_plot))
+
+    # 12b. Set labels for the axes, show the plot
+    plt.xlabel(x_label)
     plt.ylabel('Proportion of Molecules with Improvement within the Same Cluster')
-    plt.legend()
     plt.show()
 
 
 if __name__ == '__main__':
     main()
-
-
-##############################################################
-#______  _____   _          ______   ______ ______  ________ #
-#|  ___ \(____ \ | |        (_____ \ / __   (_____ \(_______/#
-#| |   | |_   \ \| |          ____) ) | //| | ____) )  ____  #
-#| |   | | |   | | |         /_____/| |// | |/_____/  (___ \ #
-#| |   | | |__/ /| |_____    _______|  /__| |_______ _____) )#
-#|_|   |_|_____/ |_______)  (_______)\_____/(_______|______/ #
-##############################################################    
