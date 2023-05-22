@@ -1,3 +1,8 @@
+# TODO: lower cutoffs for clustering and use the biggest cluster;
+# Output structures from the most populated clusters
+# Ensure that the clustering utilizes complete linkage
+
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -231,7 +236,6 @@ def main():
         return c / (1 + np.exp(-a * (x - b)))
 
     params, _ = curve_fit(sigmoid, x_data, y_data, p0=[a_init, b_init, c_init])
-
     a, b, c = params
     y_fit_sigmoid = sigmoid(x_fit, a, b, c)
 
@@ -247,8 +251,8 @@ def main():
     t_value = t.ppf((1 + confidence) / 2, n - 2)
     confidence_band = t_value * se
 
-    isLogarithmic = True
     # 9. Set the x-axis values based on isLogarithmic variable
+    isLogarithmic = True
     if isLogarithmic:
         x_data_plot = -np.log10(x_data)
         x_fit_plot = -np.log10(x_fit)
@@ -261,16 +265,25 @@ def main():
     # 10. Plot the cumulative sum against the potency values
     plt.scatter(x_data_plot, y_data, c=df['Cluster'], label='Clusters')
 
-    isSigmoid = False
     # 11. Plot the regression line based on isSigmoid variable
+    isSigmoid = False
     if isSigmoid:
         # Plot the sigmoid curve
-        plt.plot(x_fit_plot, y_fit_sigmoid, 'r-', label='Sigmoid Fit')
+        plt.plot(x_fit_plot, y_fit_sigmoid, 'r--', label='Sigmoid Fit')
 
         # Add the confidence interval to the sigmoid curve
-        x_fit_upper = sigmoid(x_fit, a + confidence_band, b, c)
-        x_fit_lower = sigmoid(x_fit, a - confidence_band, b, c)
-        plt.fill_between(x_fit_plot, x_fit_lower, x_fit_upper, color='gray', alpha=0.3)
+        upper_bound = sigmoid(x_fit, a + confidence_band, b, c)
+        lower_bound = sigmoid(x_fit, a - confidence_band, b, c)
+        plt.plot(x_fit_plot, upper_bound, 'b--', label='95% Confidence')
+        plt.plot(x_fit_plot, lower_bound, 'b--')
+        plt.fill_between(x_fit_plot, lower_bound, upper_bound, color='gray', alpha=0.3)
+
+        # Calculate correlation coefficient
+        correlation_coefficient = np.corrcoef(x_data, y_data)[0, 1]
+
+        # Include the formula for the sigmoid curve in the legend
+        formula = f'Sigmoid Curve: y = {c:.3f} / (1 + exp(-{a:.3f} * (x - {b:.3f})))'
+        plt.legend(title=f'Correlation Coefficient: {correlation_coefficient:.3f}', labels=[formula])
     else:
         # Plot the linear regression line
         plt.plot(x_fit_plot, y_fit_linear, 'r--',
@@ -280,10 +293,9 @@ def main():
         y_fit_upper = y_fit_linear + confidence_band
         y_fit_lower = y_fit_linear - confidence_band
 
-        # Plot the confidence curve for linear regression
+        # Plot the confidence curve for regression
         plt.plot(x_fit_plot, y_fit_upper, 'b--', label='95% Confidence')
         plt.plot(x_fit_plot, y_fit_lower, 'b--')
-
         plt.fill_between(x_fit_plot, y_fit_upper, y_fit_lower, color='gray', alpha=0.3)
 
         #  Calculate correlation coefficient
