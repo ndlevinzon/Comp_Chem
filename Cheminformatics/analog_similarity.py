@@ -1,26 +1,28 @@
 # TODO: lower cutoffs for clustering and use the biggest cluster;
-# Output structures from the most populated clusters
-# Ensure that the clustering utilizes complete linkage
+# TODO: Output structures from the most populated clusters
 
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from rdkit import Chem, DataStructs
-from rdkit.Chem import rdMolDescriptors
+from rdkit.Chem import rdMolDescriptors, Draw
 from scipy.stats import t
 from scipy.optimize import curve_fit
 
 
 def readCSV(csv_file):
-    """Read CSV file from ChEMBL Query"""
-    data = pd.read_csv(csv_file, lineterminator='\n', sep=';', dtype={13: str})
+    """Read CSV file from ChEMBL Query and create a lookup table"""
+    data = pd.read_csv(csv_file, lineterminator='\n', sep=';')
 
-    # Iterate over each row in the CSV to enumerate Actives in a lookup table
+    # Create a dictionary to store the SMILES and POTENCY_VALUE
     ligand_lookup = {}
+
     for _, row in data.iterrows():
-        # Store the values of row[7] (SMILES) and row[10] (POTENCY_VALUE) in the lookup table
-        ligand_lookup[row[7]] = row[10]
+        SMILES = row['Smiles']
+        POTENCY= row['Standard Value']
+        ligand_lookup[SMILES] = POTENCY
+
     print("CSV Lookup:\n" + str(ligand_lookup))
     return ligand_lookup
 
@@ -36,7 +38,7 @@ def generateFingerprint(smiles):
 
 def fingerprint(ligand_lookup):
     """Calculate fingerprints from ChEMBL SMILES"""
-    df = pd.DataFrame(list(ligand_lookup.items()), columns=['SMILES', 'Potency'])
+    df = pd.DataFrame(list(ligand_lookup.items()), columns=['SMILES', 'POTENCY'])
 
     # Create a new column to store the fingerprints
     df['Fingerprint'] = ''
@@ -81,34 +83,22 @@ def calculateDistanceMatrix(fingerprints):
     print("Distance (Tanimoto) Matrix:\n" + str(distance_matrix))
     return distance_matrix
 
+########################################################################################################################
 
-def growCluster(distance_matrix, pt, neighbors, cluster, assigned, cutoff):
-    """Recursively grow a cluster
-    Parameters:
-        distance_matrix: Tanimoto distance matrix
-        pt: current point being processed
-        neighbors: distance or similarity values of pt with other points
-        cluster: current cluster being grown
-        assigned: array indicating if a point has been assigned to a cluster
-        cutoff: distance threshold for clustering
-    """
-    # Convert neighbors to a NumPy array
-    neighbors = np.array(neighbors)
+def calculate_linkage_distance(cluster1, cluster2, distance_matrix):
+    """Calculate the linkage distance between two clusters using complete linkage"""
+    distances = distance_matrix[np.ix_(cluster1, cluster2)]
+    return np.max(distances)
 
-    # Find the indices of the unassigned points within the distance threshold
-    indices = np.where(np.logical_and(neighbors <= cutoff, np.logical_not(assigned)))[0]
 
-    # Assign the unassigned points to the cluster
-    assigned[indices] = 1
-    cluster.extend(indices.tolist())
-
-    # Recursively grow the cluster for each unassigned point
-    for index in indices:
-        growCluster(distance_matrix, index, distance_matrix[index], cluster, assigned, cutoff)
+def merge_clusters(clusters, i, j):
+    """Merge two clusters"""
+    clusters[i].extend(clusters[j])
+    del clusters[j]
 
 
 def clusterData(distance_matrix, nPts, cutoff):
-    """Cluster a set of data points
+    """Cluster a set of data points using complete linkage clustering
     Parameters:
         distance_matrix: distance matrix or pre-calculated distance list
         nPts: number of data points
@@ -116,27 +106,35 @@ def clusterData(distance_matrix, nPts, cutoff):
     """
 
     # Create a list of clusters
-    clusters = []
-    # Create a list to store whether a data point has been assigned to a cluster
-    assigned = np.zeros(nPts, bool)
+    clusters = [[i] for i in range(nPts)]
 
-    for pt in range(nPts):
-        if not assigned[pt]:
-            # Add a new cluster
-            new_cluster = [pt]
-            clusters.append(new_cluster)
-            assigned[pt] = 1
-            # Grow the cluster
-            growCluster(distance_matrix, pt, distance_matrix[pt], new_cluster, assigned, cutoff)
+    while True:
+        max_distance = 0
+        merge_indices = None
+
+        # Find the pair of clusters with the maximum distance
+        for i in range(len(clusters)):
+            for j in range(i + 1, len(clusters)):
+                distance = calculate_linkage_distance(clusters[i], clusters[j], distance_matrix)
+                if distance > max_distance:
+                    max_distance = distance
+                    merge_indices = (i, j)
+
+        # Stop if the maximum distance is below the cutoff
+        if max_distance <= cutoff:
+            break
+
+        # Merge the clusters with the maximum distance
+        merge_clusters(clusters, merge_indices[0], merge_indices[1])
 
     return clusters
-
 
 def clusterFingerprints(distance_matrix, cutoff):
     clusters = clusterData(distance_matrix, len(distance_matrix), cutoff)
     clusters = sorted(clusters, key=len, reverse=True)
     return clusters
 
+########################################################################################################################
 
 def main():
     # Read the CSV and calculate fingerprint representations
@@ -176,27 +174,30 @@ def main():
 
 ########################################################################################################################
 
-    # 0. Convert units of potency from nM to M
-    df['Potency_Converted'] = df['Potency'] * 1e-9
+    # Convert units of potency from nM to M
+    df['POTENCY_Converted'] = df['POTENCY'] * 1e-9
 
-    # 1. Create a dictionary to map molecule ID numbers to their corresponding cluster number
+    # Create a dictionary to map molecule ID numbers to their corresponding cluster number
     cluster_mapping = {}
     cluster_counter = 1
 
-    # 2. Iterate over each group in the 'clusters' list
+    # Iterate over each group in the 'clusters' list
     for group in clusters:
         # Assign the same cluster number to all molecules in the group
         for molecule_id in group:
             cluster_mapping[molecule_id] = cluster_counter
         cluster_counter += 1
 
-    # 3. Create the 'cluster' column in the DataFrame based on the cluster mapping
-    df['Cluster'] = df.index.map(cluster_mapping)
+    # Create the 'cluster' column in the DataFrame based on the cluster mapping
+    df['CLUSTER'] = df.index.map(cluster_mapping)
 
-    # 4. Group the DataFrame by the 'Cluster' column
-    grouped = df.groupby('Cluster')
+    # Group the DataFrame by the 'Cluster' column
+    grouped = df.groupby('CLUSTER')
 
-    # 5. Iterate over each cluster
+    # Print PANDAS DF
+    print(df)
+
+    # Iterate over each cluster
     for cluster, group in grouped:
 
         # Exclude clusters with less than 5 members
@@ -204,10 +205,10 @@ def main():
             continue
 
         # Drop entries with NaN potency values
-        group = group.dropna(subset=['Potency_Converted'])
+        group = group.dropna(subset=['POTENCY_Converted'])
 
         # Sort the group by potency in ascending order
-        sorted_group = group.sort_values('Potency_Converted')
+        sorted_group = group.sort_values('POTENCY_Converted')
 
         # Calculate the proportion for each molecule in the cluster
         proportion = np.arange(1, len(sorted_group) + 1) / len(sorted_group)
@@ -215,23 +216,23 @@ def main():
         # Assign the proportion values to the 'Proportion' column
         df.loc[sorted_group.index, 'Proportion'] = proportion
 
-    # 6. Exclude entries with NaN values from subsequent calculations
+    # Exclude entries with NaN values from subsequent calculations
     df = df.dropna()
 
-    # 7a. Perform linear regression using all data points
-    x_data = df['Potency_Converted']
+    # Perform linear regression using all data points
+    x_data = df['POTENCY_Converted']
     y_data = df['Proportion']
     slope, intercept = np.polyfit(x_data, y_data, deg=1)
     x_fit = np.linspace(min(x_data), max(x_data), 100)
     y_fit_linear = slope * x_fit + intercept
 
-    # 7b. Estimate initial parameters for sigmoid function
+    # Estimate initial parameters for sigmoid function
     x_min = min(x_data)
-    a_init = 10
+    a_init = 1
     b_init = x_min
-    c_init = 10
+    c_init = 1
 
-    # 7c. Fit a sigmoid function to the data
+    # Fit a sigmoid function to the data
     def sigmoid(x, a, b, c):
         return c / (1 + np.exp(-a * (x - b)))
 
@@ -239,19 +240,20 @@ def main():
     a, b, c = params
     y_fit_sigmoid = sigmoid(x_fit, a, b, c)
 
-    # 8a. Calculate standard error of the estimate
+    # Calculate standard error of the estimate
     y_pred = slope * x_data + intercept
     error = y_data - y_pred
     mse = np.mean(error ** 2)
     se = np.sqrt(mse)
-
-    # 8b. Calculate upper and lower bounds of the confidence band
+    
+    # Calculate upper and lower bounds of the confidence band
     confidence = 0.95
     n = len(x_data)
     t_value = t.ppf((1 + confidence) / 2, n - 2)
     confidence_band = t_value * se
 
-    # 9. Set the x-axis values based on isLogarithmic variable
+
+    # Set the x-axis values based on isLogarithmic variable
     isLogarithmic = True
     if isLogarithmic:
         x_data_plot = -np.log10(x_data)
@@ -262,55 +264,55 @@ def main():
         x_fit_plot = x_fit
         x_label = 'Potency (M)'
 
-    # 10. Plot the cumulative sum against the potency values
-    plt.scatter(x_data_plot, y_data, c=df['Cluster'], label='Clusters')
+    # Create a new figure and axes for the graph
+    fig, ax_graph = plt.subplots()
 
-    # 11. Plot the regression line based on isSigmoid variable
-    isSigmoid = False
+    # Plot the cumulative sum against the potency values
+    ax_graph.scatter(x_data_plot, y_data, c=df['CLUSTER'], label='Clusters')
+
+    # Plot the regression line based on isSigmoid variable
+    isSigmoid = True
     if isSigmoid:
-        # Plot the sigmoid curve
-        plt.plot(x_fit_plot, y_fit_sigmoid, 'r--', label='Sigmoid Fit')
-
-        # Add the confidence interval to the sigmoid curve
-        upper_bound = sigmoid(x_fit, a + confidence_band, b, c)
-        lower_bound = sigmoid(x_fit, a - confidence_band, b, c)
-        plt.plot(x_fit_plot, upper_bound, 'b--', label='95% Confidence')
-        plt.plot(x_fit_plot, lower_bound, 'b--')
-        plt.fill_between(x_fit_plot, lower_bound, upper_bound, color='gray', alpha=0.3)
+        # Plot the sigmoid curve and include the formula for the sigmoid curve
+        formula: str = f'Sigmoid Curve: y = {c:.3f} / (1 + exp(-{a:.3f} * (x - {b:.3f})))'
+        ax_graph.plot(x_fit_plot, y_fit_sigmoid, 'r--', label=formula)
 
         # Calculate correlation coefficient
         correlation_coefficient = np.corrcoef(x_data, y_data)[0, 1]
 
-        # Include the formula for the sigmoid curve in the legend
-        formula = f'Sigmoid Curve: y = {c:.3f} / (1 + exp(-{a:.3f} * (x - {b:.3f})))'
-        plt.legend(title=f'Correlation Coefficient: {correlation_coefficient:.3f}', labels=[formula])
+        ax_graph.legend(title=f'Correlation Coefficient: {correlation_coefficient:.3f}')
     else:
-        # Plot the linear regression line
-        plt.plot(x_fit_plot, y_fit_linear, 'r--',
-                 label=f'Linear Regression: y = {slope:.3g}x + {intercept:.3g}')
+        # Plot the linear regression line and include the formula for the curve
+        ax_graph.plot(x_fit_plot, y_fit_linear, 'r--', label=f'Linear Regression: y = {slope:.3g}x + {intercept:.3g}')
 
         # Calculate the confidence curve for linear regression
         y_fit_upper = y_fit_linear + confidence_band
         y_fit_lower = y_fit_linear - confidence_band
 
         # Plot the confidence curve for regression
-        plt.plot(x_fit_plot, y_fit_upper, 'b--', label='95% Confidence')
-        plt.plot(x_fit_plot, y_fit_lower, 'b--')
-        plt.fill_between(x_fit_plot, y_fit_upper, y_fit_lower, color='gray', alpha=0.3)
+        ax_graph.plot(x_fit_plot, y_fit_upper, 'b--', label='95% Confidence')
+        ax_graph.plot(x_fit_plot, y_fit_lower, 'b--')
 
-        #  Calculate correlation coefficient
+        # Calculate correlation coefficient
         correlation_coefficient = np.corrcoef(x_data, y_data)[0, 1]
 
         # Include the correlation coefficient in the legend
-        plt.legend(title=f'Correlation Coefficient: {correlation_coefficient:.3f}')
+        ax_graph.legend(title=f'Correlation Coefficient: {correlation_coefficient:.3f}')
 
-    # 12a. Set the x-axis limits
-    plt.xlim(min(x_data_plot), max(x_data_plot))
+    # Set the x-axis limits for the graph
+    ax_graph.set_xlim(min(x_data_plot), max(x_data_plot))
 
-    # 12b. Set labels for the axes, show the plot
-    plt.xlabel(x_label)
-    plt.ylabel('Proportion of Molecules with Improvement within the Same Cluster')
+    # Set labels for the axes of the graph
+    ax_graph.set_xlabel(x_label)
+    ax_graph.set_ylabel('Prop. Molecules with Improvement within the Same Cluster')
+
+    # Show the plot
     plt.show()
+
+    # Save the plot as a PNG file
+    output_file = "output_graph.png"
+    plt.savefig(output_file, dpi=300)
+    print(f"Graph saved as {output_file}")
 
 
 if __name__ == '__main__':
