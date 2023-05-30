@@ -1,7 +1,3 @@
-# TODO: lower cutoffs for clustering and use the biggest cluster;
-# TODO: Output structures from the most populated clusters
-
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -83,7 +79,6 @@ def calculateDistanceMatrix(fingerprints):
     print("Distance (Tanimoto) Matrix:\n" + str(distance_matrix))
     return distance_matrix
 
-########################################################################################################################
 
 def calculate_linkage_distance(cluster1, cluster2, distance_matrix):
     """Calculate the linkage distance between two clusters using complete linkage"""
@@ -134,8 +129,6 @@ def clusterFingerprints(distance_matrix, cutoff):
     clusters = sorted(clusters, key=len, reverse=True)
     return clusters
 
-########################################################################################################################
-
 def main():
     # Read the CSV and calculate fingerprint representations
     ligand_lookup = readCSV(csv_file='Q9NUW8_lig.csv')
@@ -171,9 +164,7 @@ def main():
     # plt.ylabel("Number of molecules")
     # plt.bar(range(1, len(clusters) + 1), [len(c) for c in clusters], lw=5)
     # plt.show()
-
-########################################################################################################################
-
+    
     # Convert units of potency from nM to M
     df['POTENCY_Converted'] = df['POTENCY'] * 1e-9
 
@@ -313,7 +304,6 @@ def main():
     output_file = "output_graph.png"
     plt.savefig(output_file, dpi=300)
     print(f"Graph saved as {output_file}")
-
 
 if __name__ == '__main__':
     main()
