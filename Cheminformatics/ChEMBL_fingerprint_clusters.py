@@ -1,3 +1,4 @@
+import heapq
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,11 +7,10 @@ from rdkit.Chem import rdMolDescriptors, Draw
 from scipy.stats import t
 from scipy.optimize import curve_fit
 
-
 def readCSV(csv_file):
     """Read CSV file from ChEMBL Query and create a lookup table"""
+    
     data = pd.read_csv(csv_file, lineterminator='\n', sep=';')
-
     # Create a dictionary to store the SMILES and POTENCY_VALUE
     ligand_lookup = {}
 
@@ -18,30 +18,30 @@ def readCSV(csv_file):
         SMILES = row['Smiles']
         POTENCY= row['Standard Value']
         ligand_lookup[SMILES] = POTENCY
-
     print("CSV Lookup:\n" + str(ligand_lookup))
     return ligand_lookup
 
-
 def generateFingerprint(smiles):
     """Generate RDKit fingerprint for a given SMILES"""
+    
     mol = Chem.MolFromSmiles(smiles)
+    
     if mol is not None:
         fingerprint = rdMolDescriptors.GetMorganFingerprintAsBitVect(mol, 2, nBits=2048)
         return fingerprint
     return None
 
-
 def fingerprint(ligand_lookup):
     """Calculate fingerprints from ChEMBL SMILES"""
+    
     df = pd.DataFrame(list(ligand_lookup.items()), columns=['SMILES', 'POTENCY'])
 
     # Create a new column to store the fingerprints
     df['Fingerprint'] = ''
+    
     for index, row in df.iterrows():
         # Get the SMILES code from the row
         smiles = str(row['SMILES'])
-
         # Generate the RDKit fingerprint
         fingerprint = generateFingerprint(smiles)
 
@@ -59,8 +59,10 @@ def fingerprint(ligand_lookup):
 
 def calculateDistanceMatrix(fingerprints):
     """Calculate Tanimoto similarity matrix between fingerprints"""
+    
     # Get the number of fingerprints
     num_fingerprints = len(fingerprints)
+    
     # Create an empty distance matrix
     distance_matrix = np.zeros((num_fingerprints, num_fingerprints))
 
@@ -69,8 +71,10 @@ def calculateDistanceMatrix(fingerprints):
         for j in range(i):
             # Calculate the Tanimoto similarity between the fingerprints
             similarity = DataStructs.TanimotoSimilarity(fingerprints[i], fingerprints[j])
+            
             # Calculate the distance as 1 minus the similarity
             distance = 1 - similarity
+            
             # Store the distance in both positions of the distance matrix
             distance_matrix[i][j] = distance
             distance_matrix[j][i] = distance
@@ -79,17 +83,20 @@ def calculateDistanceMatrix(fingerprints):
     print("Distance (Tanimoto) Matrix:\n" + str(distance_matrix))
     return distance_matrix
 
-
 def calculate_linkage_distance(cluster1, cluster2, distance_matrix):
     """Calculate the linkage distance between two clusters using complete linkage"""
+    
     distances = distance_matrix[np.ix_(cluster1, cluster2)]
     return np.max(distances)
 
+def merge_clusters(clusters, index1, index2):
+    """Merge two clusters in the list of clusters"""
+    
+    if index1 >= len(clusters) or index2 >= len(clusters):
+        return
 
-def merge_clusters(clusters, i, j):
-    """Merge two clusters"""
-    clusters[i].extend(clusters[j])
-    del clusters[j]
+    clusters[index1].extend(clusters[index2])
+    del clusters[index2]
 
 
 def clusterData(distance_matrix, nPts, cutoff):
@@ -99,24 +106,26 @@ def clusterData(distance_matrix, nPts, cutoff):
         nPts: number of data points
         cutoff: distance threshold for clustering
     """
-
+    
     # Create a list of clusters
     clusters = [[i] for i in range(nPts)]
 
-    while True:
-        max_distance = 0
-        merge_indices = None
+    # Create a max heap of distances
+    max_heap = []
+    for i in range(len(clusters)):
+        for j in range(i + 1, len(clusters)):
+            distance = calculate_linkage_distance(clusters[i], clusters[j], distance_matrix)
+            heapq.heappush(max_heap, (-distance, (i, j)))
 
-        # Find the pair of clusters with the maximum distance
-        for i in range(len(clusters)):
-            for j in range(i + 1, len(clusters)):
-                distance = calculate_linkage_distance(clusters[i], clusters[j], distance_matrix)
-                if distance > max_distance:
-                    max_distance = distance
-                    merge_indices = (i, j)
+    while len(max_heap) > 0:
+        max_distance, merge_indices = heapq.heappop(max_heap)
+
+        # Check if the heap is empty
+        if len(max_heap) == 0:
+            break
 
         # Stop if the maximum distance is below the cutoff
-        if max_distance <= cutoff:
+        if -max_distance <= cutoff:
             break
 
         # Merge the clusters with the maximum distance
@@ -129,9 +138,10 @@ def clusterFingerprints(distance_matrix, cutoff):
     clusters = sorted(clusters, key=len, reverse=True)
     return clusters
 
+
 def main():
     # Read the CSV and calculate fingerprint representations
-    ligand_lookup = readCSV(csv_file='Q9NUW8_lig.csv')
+    ligand_lookup = readCSV(csv_file='Q9NUW8_lig_full.csv')
     df = fingerprint(ligand_lookup)
 
     # Extract RDKit fingerprints from DataFrame
@@ -164,7 +174,7 @@ def main():
     # plt.ylabel("Number of molecules")
     # plt.bar(range(1, len(clusters) + 1), [len(c) for c in clusters], lw=5)
     # plt.show()
-    
+
     # Convert units of potency from nM to M
     df['POTENCY_Converted'] = df['POTENCY'] * 1e-9
 
@@ -304,6 +314,7 @@ def main():
     output_file = "output_graph.png"
     plt.savefig(output_file, dpi=300)
     print(f"Graph saved as {output_file}")
+
 
 if __name__ == '__main__':
     main()
