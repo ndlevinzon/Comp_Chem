@@ -1,0 +1,224 @@
+import heapq
+import argparse
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from rdkit import Chem, DataStructs
+from rdkit.Chem import rdMolDescriptors
+from rdkit.Chem.Scaffolds import MurckoScaffold
+from scipy import stats
+from scipy.sparse import lil_matrix
+from scipy.optimize import curve_fit
+
+
+def read_csv(csv_file):
+    """
+    Read CSV file from ChEMBL Query and create a pandas DataFrame
+
+    Parameters:
+    csv_file (str): Path to the CSV file
+
+    Returns:
+    df (pandas.DataFrame): DataFrame containing the data from the CSV file
+    """
+
+    # Read the CSV file into a pandas DataFrame
+    data = pd.read_csv(csv_file, lineterminator='\n', sep=';', dtype=str)
+
+    # Create a new DataFrame with 'SMILES' and 'POTENCY' columns from the CSV data
+    df = pd.DataFrame({'SMILES': data['Smiles'], 'POTENCY': data['Standard Value']})
+
+    # Drop rows with missing values in 'SMILES' and 'POTENCY' columns
+    df.dropna(subset=['SMILES', 'POTENCY'], inplace=True)
+
+    # Convert the 'POTENCY' column to numeric type
+    df['POTENCY'] = pd.to_numeric(df['POTENCY'], errors='coerce')
+
+    # Convert the potency units from nM to M by multiplying by 1e-9
+    df['POTENCY_Converted'] = df['POTENCY'] * 1e-9
+
+    return df
+
+
+def add_scaffold_and_group(df):
+    """Add 'SCAFFOLD', 'GROUP', and 'Prop_10X' columns to the DataFrame"""
+
+    # Add 'SCAFFOLD' column to the DataFrame
+    df['SCAFFOLD'] = df['SMILES'].apply(
+        lambda x: Chem.MolToSmiles(MurckoScaffold.GetScaffoldForMol(Chem.MolFromSmiles(str(x)))))
+
+    # Initialize dictionary and counter for grouping
+    group_mapping = {}
+    group_counter = 1
+
+    def assign_group(scaffold):
+        nonlocal group_counter
+
+        # Check if scaffold is already in the group mapping
+        if scaffold in group_mapping:
+            # Return the existing group number
+            return group_mapping[scaffold]
+        else:
+            # Add the scaffold to the group mapping and assign a new group number
+            group_mapping[scaffold] = group_counter
+            group_counter += 1
+            # Return the newly assigned group number for the scaffold
+            return group_mapping[scaffold]
+
+    # Add 'GROUP' column to the DataFrame by applying the assign_group function to each scaffold
+    df['GROUP'] = df['SCAFFOLD'].apply(assign_group)
+
+    # Calculate the proportion of entries with a 10-fold reduction in POTENCY_Converted within each group
+    df['Prop_10X'] = 0.0  # Initialize the 'Prop_10X' column with 0.0
+
+    # Iterate through each group over 25 members
+    group_counts = df['GROUP'].value_counts()
+    groups_over_25 = group_counts[group_counts > 25].index.tolist()
+
+    for group in groups_over_25:
+        group_indices = df[df['GROUP'] == group].index
+
+        for idx in group_indices:
+            potency = df.loc[idx, 'POTENCY_Converted']
+            other_potencies = df.loc[group_indices, 'POTENCY_Converted']
+            reduction_count = sum(other_potencies <= (potency/10))
+            prop_10x = reduction_count / (len(group_indices)) if len(group_indices) > 1 else 0.0
+
+            df.loc[idx, 'Prop_10X'] = prop_10x
+
+    # Print the total number of groups found
+    print("Total number of groups found:", group_counter - 1)
+
+    # Print the number of groups with more than 1 member
+    print("Number of groups with more than 1 member:",
+          len(df['GROUP'].value_counts()[df['GROUP'].value_counts() > 1]))
+
+    # Print the number of groups with more than 5 members
+    print("Number of groups with more than 5 members:",
+          len(df['GROUP'].value_counts()[df['GROUP'].value_counts() > 5]))
+
+    # Print the number of groups with more than 10 members
+    print("Number of groups with more than 10 members:",
+          len(df['GROUP'].value_counts()[df['GROUP'].value_counts() > 10]))
+
+    # Print the number of groups with more than 25 members
+    group_counts = df['GROUP'].value_counts()
+    groups_over_25 = group_counts[group_counts > 25].index.tolist()
+    print("Number of groups with more than 25 members:",
+          len(groups_over_25))
+
+    # Print the scaffold and group index for all groups over 25 members
+    for group in groups_over_25:
+        scaffold = df[df['GROUP'] == group]['SCAFFOLD'].iloc[0]
+        print(f"Group {group}: Scaffold - {scaffold}")
+
+    # Return the modified DataFrame with added 'SCAFFOLD', 'GROUP', and 'Prop_10X' columns
+    return df
+
+
+def rank_entries(df):
+    """Rank the entries within each B-M family based on POTENCY values"""
+
+    # Rank the entries within each group based on POTENCY values
+    df['RANK'] = df.groupby('GROUP')['POTENCY'].rank(ascending=True, method='min')
+
+    # Count the number of entries in each group
+    group_counts = df['GROUP'].value_counts().reset_index()
+    group_counts.columns = ['GROUP', 'COUNT']
+
+    # Merge the group counts back into the DataFrame
+    df = pd.merge(df, group_counts, on='GROUP')
+
+    # Calculate the proportion of molecules with improvement within the same scaffold
+    df['PROP_IMPROV'] = df['RANK'] / df['COUNT']
+
+    # Return the modified DataFrame with added 'RANK', 'COUNT', and 'PROP_IMPROV' columns
+    return df
+
+
+def graph(df, subtitle):
+    """Plot the families sharing the same B-M Scaffold"""
+    plt.figure()
+
+    y_data = df['PROP_IMPROV']
+    y_label = 'Prop. Molecules with Improvement within the Same Scaffold'
+
+    x_label = '-log(Potency) (M)'
+    x_data = df['POTENCY_Converted']
+    x_data = -np.log10(x_data)  # Convert x_data to -log(x)
+    plt.xscale("log")  # Scale x-axis to logarithmic if isLogarithmic is True
+
+    # Select the groups with more than 25 members
+    group_counts = df['GROUP'].value_counts()
+
+    # Print from the top five groups
+    top_groups = group_counts[group_counts.index != ''].nlargest(5).index.tolist()
+    print("Top 5 Most Populous Groups:", top_groups)
+    for group in top_groups:
+        group_data = df[df['GROUP'] == group]
+
+        # Print the scaffold for the group
+        scaffold = group_data['SCAFFOLD'].iloc[0]
+        print(f"Group {group}: Scaffold - {scaffold}")
+
+        lowest_potency_index = group_data['POTENCY'].idxmin()
+        lowest_potency_smiles = group_data.loc[lowest_potency_index, 'SMILES']
+        print(f"Group: {group}, Lowest POTENCY SMILES: {lowest_potency_smiles}")
+
+        highest_potency_index = group_data['POTENCY'].idxmax()
+        highest_potency_smiles = group_data.loc[highest_potency_index, 'SMILES']
+        print(f"Group: {group}, Highest POTENCY SMILES: {highest_potency_smiles}")
+
+    # Combine data points from the groups over 25 members
+    combined_x = []
+    combined_y = []
+    groups_over_25 = group_counts[(group_counts > 25) & (group_counts.index != '')].index.tolist()
+    for group in groups_over_25:
+        group_data = df[df['GROUP'] == group]
+        combined_x.extend(x_data[group_data.index])
+        combined_y.extend(y_data[group_data.index])
+
+        # Each group will have a unique color
+        color = plt.cm.Set1(group % plt.cm.Set1.N)
+        plt.scatter(x_data[group_data.index], y_data[group_data.index], color=color, alpha=0.6, s=10)
+
+    plt.ylim(0, 1)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.suptitle(subtitle)
+    plt.title('The Proportion of Analogs as a Function of Potency')
+    plt.show()
+
+
+def create_histogram(df, subtitle):
+    """Create a histogram of 'Prop_10X' values for groups with more than 25 members"""
+
+    # Select groups with more than 25 members
+    group_counts = df['GROUP'].value_counts()
+    valid_groups = group_counts[group_counts > 25].index.tolist()
+
+    # Set up the histogram plot
+    plt.figure()
+    plt.hist(df[df['GROUP'].isin(valid_groups)]['Prop_10X'], bins=20, range=(0, 1), edgecolor='black')
+    plt.xlabel('Success Rate \n (10-fold Increase in Potency from Parent with Same B-M Scaffold)')
+    plt.ylabel('Frequency')
+    plt.suptitle(subtitle)
+    plt.title('Distribution of Success Rates for Analogs')
+    plt.show()
+
+
+def main():
+
+    df = read_csv(csv_file='ligands/Q96QE3/Q96QE3.csv')
+    df = add_scaffold_and_group(df)
+    df = rank_entries(df)
+
+    # Name of Target
+    subtitle = 'ATPase family AAA domain-containing protein 5, UniProt: Q96QE3'
+    graph(df=df, subtitle=subtitle)
+    create_histogram(df=df, subtitle=subtitle)
+    print(df)
+
+
+if __name__ == '__main__':
+    main()
