@@ -1,14 +1,10 @@
-import heapq
-import argparse
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from rdkit import Chem, DataStructs
-from rdkit.Chem import rdMolDescriptors
+from rdkit import Chem
 from rdkit.Chem.Scaffolds import MurckoScaffold
-from scipy import stats
-from scipy.sparse import lil_matrix
-from scipy.optimize import curve_fit
+from sqlalchemy import create_engine
 
 
 def read_csv(csv_file):
@@ -26,7 +22,8 @@ def read_csv(csv_file):
     data = pd.read_csv(csv_file, lineterminator='\n', sep=';', dtype=str)
 
     # Create a new DataFrame with 'SMILES' and 'POTENCY' columns from the CSV data
-    df = pd.DataFrame({'SMILES': data['Smiles'], 'POTENCY': data['Standard Value']})
+    df = pd.DataFrame({'TARGET': data['Target ChEMBL ID'], 'SMILES': data['Smiles'],
+                       'POTENCY': data['Standard Value']})
 
     # Drop rows with missing values in 'SMILES' and 'POTENCY' columns
     df.dropna(subset=['SMILES', 'POTENCY'], inplace=True)
@@ -208,16 +205,54 @@ def create_histogram(df, subtitle):
 
 
 def main():
+    # Source CSV from ChEMBL
+    csv_file = 'ligands/O75496/DOWNLOAD-s4J2I-ywcUMLMswllk75v0xJVZYFnVXldsps_qCh0_A=.csv'
+    subtitle = 'Glucagon-like peptide 1 receptor, UniProt: P43220'
 
-    df = read_csv(csv_file='ligands/Q96QE3/Q96QE3.csv')
-    df = add_scaffold_and_group(df)
-    df = rank_entries(df)
+    # Connect to the SQLite database
+    database_file = 'ligands/histogram_data.db'
+    engine = create_engine(f'sqlite:///{database_file}')
 
-    # Name of Target
-    subtitle = 'ATPase family AAA domain-containing protein 5, UniProt: Q96QE3'
-    graph(df=df, subtitle=subtitle)
-    create_histogram(df=df, subtitle=subtitle)
-    print(df)
+    # Check if the database file exists
+    if not os.path.isfile(database_file):
+        df = read_csv(csv_file=csv_file)
+        df = add_scaffold_and_group(df)
+        df = rank_entries(df)
+
+        # Graph data
+        graph(df=df, subtitle=subtitle)
+        create_histogram(df=df, subtitle=subtitle)
+
+        # Store the DataFrame in the database
+        df.to_sql('histogram_data', con=engine, index=False)
+        print("Database created and data inserted.")
+    else:
+        # Read the new data from CSV
+        df = read_csv(csv_file=csv_file)
+        df = add_scaffold_and_group(df)
+        df = rank_entries(df)
+
+        # Graph data
+        graph(df=df, subtitle=subtitle)
+        create_histogram(df=df, subtitle=subtitle)
+
+        # Retrieve the existing data from the database
+        query = "SELECT TARGET FROM histogram_data"
+        existing_targets = pd.read_sql_query(query, con=engine)['TARGET'].tolist()
+
+        # Find new entries not present in the database
+        new_entries = df[~df['TARGET'].isin(existing_targets)]
+
+        if not new_entries.empty:
+            # Store the new entries in the database
+            new_entries.to_sql('histogram_data', con=engine, index=False, if_exists='append')
+            print("New data inserted into the database.")
+        else:
+            print("No new data to insert.")
+
+    # Retrieve the updated data from the database
+    query = "SELECT * FROM histogram_data"
+    print(pd.read_sql_query(query, con=engine))
 
 
 if __name__ == '__main__':
