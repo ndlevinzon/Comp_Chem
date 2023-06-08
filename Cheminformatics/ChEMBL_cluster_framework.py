@@ -52,38 +52,35 @@ def generate_fingerprint(smiles):
 def fingerprint(df):
     """Calculate fingerprints from ChEMBL SMILES"""
 
-    df['Fingerprint'] = ''                             # Create a new column to store the fingerprints
+    df['Fingerprint'] = ''                              # Create a new column to store the fingerprints
     for index, row in df.iterrows():
-        smiles = str(row['SMILES'])                    # Get the SMILES code from the row
+        smiles = str(row['SMILES'])                     # Get the SMILES code from the row
         fingerprint = generate_fingerprint(smiles)      # Generate the RDKit fingerprint
 
         if fingerprint is not None:
-            df.at[index, 'Fingerprint'] = fingerprint  # Store the fingerprint in the DataFrame
+            df.at[index, 'Fingerprint'] = fingerprint   # Store the fingerprint in the DataFrame
 
-    df = df[df['Fingerprint'] != '']                   # Filter out rows with None fingerprints
+    df = df[df['Fingerprint'] != '']                    # Filter out rows with None fingerprints
 
-    print("PANDAS Dataframe:\n" + str(df))             # Return the updated DataFrame
+    print("PANDAS Dataframe:\n" + str(df))              # Return the updated DataFrame
     return df
 
 
 def calculate_distance_matrix(fingerprints):
     """Calculate Tanimoto similarity matrix between fingerprints"""
-    num_fingerprints = len(fingerprints)                                   # Get the number of fingerprints
-    distance_matrix = lil_matrix((num_fingerprints, num_fingerprints))     # Create an empty sparse distance matrix
+    num_fingerprints = len(fingerprints)                                                   # Get the number of fingerprints
+    distance_matrix = lil_matrix((num_fingerprints, num_fingerprints))                     # Create an empty sparse distance matrix
 
     # Iterate over the fingerprints to calculate the distance matrix
     for i in range(1, num_fingerprints):
         for j in range(i):
-            # Calculate the Tanimoto similarity between the fingerprints
-            similarity = DataStructs.TanimotoSimilarity(fingerprints[i], fingerprints[j])
-            # Calculate the distance as 1 minus the similarity
-            distance = 1 - similarity
+            similarity = DataStructs.TanimotoSimilarity(fingerprints[i], fingerprints[j])  # Calculate the Tanimoto similarity between the fingerprints
+            distance = 1 - similarity                                                      # Calculate the distance as 1 minus the similarity
             # Store the distance in both positions of the distance matrix
             distance_matrix[i][j] = distance
             distance_matrix[j][i] = distance
-
-    # Convert to a Compressed Sparse Row (CSR) matrix
-    return distance_matrix.tocsr()
+            
+    return distance_matrix.tocsr()                                                         # Convert to a Compressed Sparse Row (CSR) matrix# Convert to a Compressed Sparse Row (CSR) matrix
 
 
 def calculate_linkage_distance(cluster1, cluster2, distance_matrix):
@@ -96,7 +93,7 @@ def merge_clusters(clusters, index1, index2):
     """Merge two clusters in the list of clusters"""
     if index1 >= len(clusters) or index2 >= len(clusters):
         return
-
+    
     clusters[index1].extend(clusters[index2])
     del clusters[index2]
 
@@ -119,18 +116,14 @@ def cluster_data(distance_matrix, nPts, cutoff):
 
     while len(max_heap) > 0:
         max_distance, merge_indices = heapq.heappop(max_heap)
-
-        # Check if the heap is empty
-        if len(max_heap) == 0:
+        
+        if len(max_heap) == 0:                                           # Check if the heap is empty
+            break
+            
+        if -max_distance <= cutoff:                                      # Stop if the maximum distance is below the cutoff
             break
 
-        # Stop if the maximum distance is below the cutoff
-        if -max_distance <= cutoff:
-            break
-
-        # Merge the clusters with the maximum distance
-        merge_clusters(clusters, merge_indices[0], merge_indices[1])
-
+        merge_clusters(clusters, merge_indices[0], merge_indices[1])     # Merge the clusters with the maximum distance
     return clusters
 
 
@@ -156,24 +149,21 @@ def add_scaffold_and_group(df):
 
         # Check if scaffold is already in the group mapping
         if scaffold in group_mapping:
-            # Return the existing group number
-            return group_mapping[scaffold]
+            return group_mapping[scaffold]                                   # Return the existing group number
         else:
-            # Add the scaffold to the group mapping and assign a new group number
-            group_mapping[scaffold] = group_counter
+            group_mapping[scaffold] = group_counter                          # Add the scaffold to the group mapping and assign a new group number
             group_counter += 1
-            # Return the newly assigned group number for the scaffold
-            return group_mapping[scaffold]
+            return group_mapping[scaffold]                                   # Return the newly assigned group number for the scaffold
 
     # Add 'GROUP' column to the DataFrame by applying the assign_group function to each scaffold
     df['GROUP'] = df['SCAFFOLD'].apply(assign_group)
 
     # Print the total number of groups found
-    print("Total number of groups found:",
+    print("Total number of groups found:",                                   
           group_counter - 1)
-
+    
     # Print the number of groups with more than 1 member
-    print("Number of groups with more than 1 member:",
+    print("Number of groups with more than 1 member:",                       
           len(df['GROUP'].value_counts()[df['GROUP'].value_counts() > 1]))
 
     # Print the number of groups with more than 5 members
@@ -193,29 +183,24 @@ def add_scaffold_and_group(df):
     for group in groups_over_25:
         scaffold = df[df['GROUP'] == group]['SCAFFOLD'].iloc[0]
         print(f"Group {group}: Scaffold - {scaffold}")
-
-    # Return the modified DataFrame with added 'SCAFFOLD' and 'GROUP' columns
-    return df
+    return df                                                                        # Return the modified DataFrame with added 'SCAFFOLD' and 'GROUP' columns
 
 
 def rank_entries(df):
     """Rank the entries within each group based on POTENCY values"""
-
-    # Rank the entries within each group based on POTENCY values
-    df['RANK'] = df.groupby('GROUP')['POTENCY'].rank(ascending=True, method='min')
+    
+    df['RANK'] = df.groupby('GROUP')['POTENCY'].rank(ascending=True, method='min')   # Rank the entries within each group based on POTENCY values
 
     # Count the number of entries in each group
     group_counts = df['GROUP'].value_counts().reset_index()
     group_counts.columns = ['GROUP', 'COUNT']
 
-    # Merge the group counts back into the DataFrame
-    df = pd.merge(df, group_counts, on='GROUP')
+    df = pd.merge(df, group_counts, on='GROUP')                                       # Merge the group counts back into the DataFrame
 
     # Calculate the proportion of molecules with improvement within the same scaffold
     df['PROP_IMPROV'] = df['RANK'] / df['COUNT']
 
-    # Return the modified DataFrame with added 'RANK', 'COUNT', and 'PROP_IMPROV' columns
-    return df
+    return df                                                                         # Return the modified DataFrame with added 'RANK', 'COUNT', and 'PROP_IMPROV' columns
 
 def plot(df, isLogarithmic):
     """Plot the clusters and logarithmic curve"""
