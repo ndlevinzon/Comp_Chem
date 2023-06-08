@@ -139,7 +139,6 @@ def cluster_fingerprints(distance_matrix, cutoff):
     clusters = sorted(clusters, key=len, reverse=True)
     return clusters
 
-########################################################################################################################
 
 def add_scaffold_and_group(df):
     """Add 'SCAFFOLD' and 'GROUP' columns to the DataFrame"""
@@ -271,8 +270,6 @@ def plot(df, isLogarithmic):
     combined_x = np.array(combined_x)
     combined_y = np.array(combined_y)
 
-########################################################################################################################
-
     # Fit the logarithmic curve to the combined data
     popt_log, _ = curve_fit(log_func, combined_x, combined_y)
 
@@ -291,8 +288,6 @@ def plot(df, isLogarithmic):
     plt.plot(line_x_log, line_y_log, color='black', linestyle='--',
              label=f'Logarithmic Fit: {popt_log[0]:.3f} * log(x) + {popt_log[1]:.3f}')
     plt.annotate(r_squared_text_log, xy=(0, 0.92), xycoords='axes fraction', ha='left', va='top')
-
-########################################################################################################################
 
     # Fit the line of best fit to the combined data
     slope, _, r_value, p_value, std_err = stats.linregress(combined_x, combined_y)
@@ -334,9 +329,6 @@ def plot(df, isLogarithmic):
     plt.plot(line_x_lin, line_y_lin, color='red', linestyle='--',
              label=f'Line of Best Fit: y = {slope:.3f}x')
     plt.annotate(r_squared_text_lin, xy=(0, 0.85), xycoords='axes fraction', ha='left', va='top')
-
-########################################################################################################################
-
     plt.ylim(0, 1)
     plt.xlabel(x_label)
     plt.ylabel(y_label)
@@ -344,7 +336,6 @@ def plot(df, isLogarithmic):
     plt.title('The Proportion of Analogs as a Function of Potency')
     plt.show()
 
-########################################################################################################################
 
 def main():
     # # Initialize parser
