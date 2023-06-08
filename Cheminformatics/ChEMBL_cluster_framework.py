@@ -10,7 +10,6 @@ from scipy import stats
 from scipy.sparse import lil_matrix
 from scipy.optimize import curve_fit
 
-########################################################################################################################
 
 def read_csv(csv_file):
     """
@@ -40,7 +39,6 @@ def read_csv(csv_file):
 
     return df
 
-########################################################################################################################
 
 def generate_fingerprint(smiles):
     """Generate RDKit fingerprint for a given SMILES"""
@@ -220,20 +218,18 @@ def rank_entries(df):
     # Return the modified DataFrame with added 'RANK', 'COUNT', and 'PROP_IMPROV' columns
     return df
 
-########################################################################################################################
-# Fit a logarithmic function
-def log_func(x, a, b):
-    """Logarithmic function"""
-    return a * np.log(x) + b
-
-# Fit a sigmoid function
-def sigmoid(x, a, b, c):
-    return c / (1 + np.exp(-a * (x - b)))
-
-
 def plot(df, isLogarithmic):
     """Plot the clusters and logarithmic curve"""
     plt.figure()
+    
+    # Fit a logarithmic function
+    def log_func(x, a, b):
+    """Logarithmic function"""
+        return a * np.log(x) + b
+
+    # Fit a sigmoid function
+    def sigmoid(x, a, b, c):
+        return c / (1 + np.exp(-a * (x - b)))
 
     y_data = df['PROP_IMPROV']
     y_label = 'Prop. Molecules with Improvement within the Same Scaffold'
