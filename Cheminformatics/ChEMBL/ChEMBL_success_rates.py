@@ -129,11 +129,15 @@ def rank_entries(df):
 def clean_df(df):
     """Filters DataFrame for small groups and deviations between SMILES and B-M Scaffold"""
 
-    # Define a function to calculate the heavy atom count
+      # Define a function to calculate the heavy atom count
     def calculate_heavy_atom_count(smiles):
         molecule = Chem.MolFromSmiles(smiles)
-        heavy_atom_count = rdMolDescriptors.CalcNumHeavyAtoms(molecule)
-        return heavy_atom_count
+        if molecule is not None:
+            Chem.Kekulize(molecule)  # Kekulize the molecule to ensure proper atom types
+            heavy_atom_count = rdMolDescriptors.CalcNumHeavyAtoms(molecule)
+            return heavy_atom_count
+        else:
+            return None
     
     df_copy = df.copy()  # Create a copy of the DataFrame to avoid the SettingWithCopyWarning
 
