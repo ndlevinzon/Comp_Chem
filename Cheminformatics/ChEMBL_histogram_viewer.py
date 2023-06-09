@@ -14,7 +14,6 @@ def main():
     df = pd.read_sql_query(query, con=engine)
 
     subtitle = 'ChEMBL Top 25 Single Proteins with the Most Active Compounds'   # Name of Target
-
     fig, ax = plt.subplots()                                                    # Set up the bar chart
 
     # Define the bin edges and width
