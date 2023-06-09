@@ -8,7 +8,7 @@ You can upload several PDB files just make sure naming is correct. One PDB file 
 Make sure charge/multiplicity is correct
 If not in the PDB file(s), can edit through the addition of a <.config> file
 Create PDB for PyRED input:
-'cp 5hnj.pdb Mol_red1.pdb'
+`cp 5hnj.pdb Mol_red1.pdb`
 ## Generate “Project.config” and/or “System.config” input files. 
 THESE FILES ARE NOT NEEDED IF THE MULTIPLICITY = 1 AND CHARGE = 0
 If this file is absent, default tasks are executed.
@@ -19,10 +19,10 @@ You will also need to add in your structure’s multiplicity/charge (Example: MO
 You can do A LOT with this file and there is really helpful documentation on PyRED’s Mini-How-To: https://upjv.q4md-forcefieldtools.org/Tutorial/Mini-HowTo-InputFiles.pdf
 
 System.config input created in text editor of choice:
-'''
+```
 OPT_Calc = OFF1
 MOLECULE1 -TOTCHARGE 2+
-'''
+```
 As more PyRED jobs are performed on a system, you may need to define forcefield parameters using a “frcmod.user” file. This of course is not needed if you are just generating <.mol2> files for AMBER purposes. 
 Compress all files for submission into a single “archive” folder (i.e. <.tar> folder) for PyRED submission.
 Compress to a .tar folder with all the necessary files using the following the command line format of: tar -cvzf <Archive.tgz> <files-you-want-to-compress>
