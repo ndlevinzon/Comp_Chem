@@ -10,7 +10,7 @@
 
 ## Generate “Project.config” and/or “System.config” input files. 
 * THESE FILES ARE NOT NEEDED IF THE MULTIPLICITY = 1 AND CHARGE = 0. If this file is absent, default tasks are executed.
-* System.config : information related to tasks performed by PyRED and allows for overwriting default tasks (geometry optimization, charge fitting, etc.…).
+* System.config : information related to tasks performed by PyRED and allows for overwriting default tasks (geometry optimization, charge fitting, etc...).
 * Project.config : information about the molecules involved in the project and allows for modifying of default information (charge, multiplicity, etc.…). 
 *PyRED will optimize your structure’s geometry unless you tell it not to. If you’ve already optimized in Gaussian, you can save time by turning this function off (Example: OPT_Calc = OFF1).
 *You will also need to add in your structure’s multiplicity/charge (Example: MOLECULE1 -TOTCHARGE 2+).
