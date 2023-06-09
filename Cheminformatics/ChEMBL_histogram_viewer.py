@@ -13,25 +13,19 @@ def main():
     query = "SELECT * FROM histogram_data"
     df = pd.read_sql_query(query, con=engine)
 
-    # Name of Target
-    subtitle = 'ChEMBL Top 25 Single Proteins with the Most Active Compounds'
+    subtitle = 'ChEMBL Top 25 Single Proteins with the Most Active Compounds'   # Name of Target
 
-    # Set up the bar chart
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots()                                                    # Set up the bar chart
 
     # Define the bin edges and width
     bin_edges = np.arange(0, 1.05, 0.05)
     bin_width = bin_edges[1] - bin_edges[0]
 
-    # Calculate the histogram
-    hist, _ = np.histogram(df['Prop_10X'], bins=bin_edges)
-
-    # Normalize the histogram
-    hist_normalized = hist / np.sum(hist)
-
+    hist, _ = np.histogram(df['Prop_10X'], bins=bin_edges)                      # Calculate the histogram
+    hist_normalized = hist / np.sum(hist)                                       # Normalize the histogram  
+    
     # Plot the bar chart
     ax.bar(bin_edges[:-1], hist_normalized, width=bin_width, align='edge', alpha=0.5, edgecolor='black')
-
     ax.set_xlabel('Success Rate \n (10-fold Increase in Potency from Parent with Same B-M Scaffold)')
     ax.set_ylabel('Normalized Frequency')
     ax.set_xlim(0, 1)
