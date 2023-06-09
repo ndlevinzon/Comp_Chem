@@ -4,10 +4,10 @@
 ## Prepare PDB input file(s)
 * Make sure to name the files correctly (i.e. Mol_red$n.pdb where $n = the molecule number (1, 2, …)) 
 * You can upload several PDB files just make sure naming is correct. One PDB file can contain several conformations, but make sure each PDB file corresponds to a single molecule. PDB’s with multiple conformations will produce a <.log> file corresponding to each optimized geometry.
-* Make sure charge/multiplicity is correct
-* If not in the PDB file(s), can edit through the addition of a <.config> file
+* Make sure charge/multiplicity is correct. If not in the PDB file(s), you can edit this through the addition of a <.config> file
 * Create PDB for PyRED input:
-`cp 5hnj.pdb Mol_red1.pdb`
+`$cp 5hnj.pdb Mol_red1.pdb`
+
 ## Generate “Project.config” and/or “System.config” input files. 
 * THESE FILES ARE NOT NEEDED IF THE MULTIPLICITY = 1 AND CHARGE = 0. If this file is absent, default tasks are executed.
 * System.config : information related to tasks performed by PyRED and allows for overwriting default tasks (geometry optimization, charge fitting, etc.…).
