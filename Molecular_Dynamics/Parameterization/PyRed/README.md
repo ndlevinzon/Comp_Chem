@@ -48,10 +48,11 @@ cd P7726/Data-R.E.D.Server/Mol_m1
 more Mol-sm_m1-c1.mol2
 ```
 
-GENERATING FRCMOD + LIBRARY FILES
+To generate parameters for the ligands for use with AMBER:
 1. <.frcmod>
-    	parmchk2 -i m1A.mol2 -f mol2 -o m1A.frcmod
+    	`parmchk2 -i m1A.mol2 -f mol2 -o m1A.frcmod`
 2. <.lib>
+    ```
     	tleap
     	source leaprc.RNA.OL3
     	source leaprc.gaff
@@ -60,4 +61,4 @@ GENERATING FRCMOD + LIBRARY FILES
     	check m1A
     	saveoff m1A m1A.lib
     	quit (edited)
-
+    ```
