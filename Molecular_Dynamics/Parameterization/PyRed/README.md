@@ -40,10 +40,13 @@ You have 20 days to download your project files before they are removed from the
 Download all the project files to your local system and have fun with your new <.mol2> file!
 Your project folder will be named after the job number ID and you will have to unzip it to access all your new files.
 Your <.mol2> file will be in Data-R.E.D.Server directory within the project folder
+    
 To unzip your project file, follow this command line format: tar -xzvf <folder-you-want-to-unzip.tar.gz>
+```
 tar -xvf P7726.tar.gz
 cd P7726/Data-R.E.D.Server/Mol_m1
 more Mol-sm_m1-c1.mol2
+```
 
 GENERATING FRCMOD + LIBRARY FILES
 1. <.frcmod>
