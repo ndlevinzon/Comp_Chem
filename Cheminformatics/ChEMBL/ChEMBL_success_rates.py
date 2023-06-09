@@ -231,8 +231,8 @@ def create_histogram(df, subtitle):
 
 def main():
     # Source CSV from ChEMBL
-    csv_file = 'ligands/Q9UNA4/DOWNLOAD-rTvoiuJRKQ_g5uD2vsXC9Wni1wpZE_I730Ak9kgxFis=.csv'
-    subtitle = 'Glucagon-like peptide 1 receptor, UniProt: P43220'
+    csv_file = ''  # Path to CSV File
+    subtitle = ''  # Subtitle for Graphs
 
     # Connect to the SQLite database
     database_file = 'ligands/histogram_data_filtered.db'
