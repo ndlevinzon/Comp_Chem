@@ -18,22 +18,16 @@ def read_csv(csv_file):
     Returns:
     df (pandas.DataFrame): DataFrame containing the data from the CSV file
     """
-
-    # Read the CSV file into a pandas DataFrame
-    data = pd.read_csv(csv_file, lineterminator='\n', sep=';', dtype=str)
+    
+    data = pd.read_csv(csv_file, lineterminator='\n', sep=';', dtype=str)             # Read the CSV file into a pandas DataFrame
 
     # Create a new DataFrame with 'SMILES' and 'POTENCY' columns from the CSV data
     df = pd.DataFrame({'TARGET': data['Target ChEMBL ID'], 'SMILES': data['Smiles'],
                        'POTENCY': data['Standard Value']})
 
-    # Drop rows with missing values in 'SMILES' and 'POTENCY' columns
-    df.dropna(subset=['SMILES', 'POTENCY'], inplace=True)
-
-    # Convert the 'POTENCY' column to numeric type
-    df['POTENCY'] = pd.to_numeric(df['POTENCY'], errors='coerce')
-
-    # Convert the potency units from nM to M by multiplying by 1e-9
-    df['POTENCY_Converted'] = df['POTENCY'] * 1e-9
+    df.dropna(subset=['SMILES', 'POTENCY'], inplace=True)                             # Drop rows with missing values in 'SMILES' and 'POTENCY' columns
+    df['POTENCY'] = pd.to_numeric(df['POTENCY'], errors='coerce')                     # Convert the 'POTENCY' column to numeric type
+    df['POTENCY_Converted'] = df['POTENCY'] * 1e-9                                    # Convert the potency units from nM to M by multiplying by 1e-9
 
     return df
 
@@ -48,20 +42,15 @@ def add_scaffold_and_group(df):
     # Initialize dictionary and counter for grouping
     group_mapping = {}
     group_counter = 1
-
     def assign_group(scaffold):
         nonlocal group_counter
 
-        # Check if scaffold is already in the group mapping
-        if scaffold in group_mapping:
-            # Return the existing group number
-            return group_mapping[scaffold]
+        if scaffold in group_mapping:                                          # Check if scaffold is already in the group mapping
+            return group_mapping[scaffold]                                     # Return the existing group number
         else:
-            # Add the scaffold to the group mapping and assign a new group number
-            group_mapping[scaffold] = group_counter
+            group_mapping[scaffold] = group_counter                            # Add the scaffold to the group mapping and assign a new group number
             group_counter += 1
-            # Return the newly assigned group number for the scaffold
-            return group_mapping[scaffold]
+            return group_mapping[scaffold]                                     # Return the newly assigned group number for the scaffold
 
     # Add 'GROUP' column to the DataFrame by applying the assign_group function to each scaffold
     df['GROUP'] = df['SCAFFOLD'].apply(assign_group)
@@ -109,29 +98,23 @@ def add_scaffold_and_group(df):
     for group in groups_over_25:
         scaffold = df[df['GROUP'] == group]['SCAFFOLD'].iloc[0]
         print(f"Group {group}: Scaffold - {scaffold}")
-
-    # Return the modified DataFrame with added 'SCAFFOLD', 'GROUP', and 'Prop_10X' columns
-    return df
+        
+    return df  # Return the modified DataFrame with added 'SCAFFOLD', 'GROUP', and 'Prop_10X' columns
 
 
 def rank_entries(df):
     """Rank the entries within each B-M family based on POTENCY values"""
 
-    # Rank the entries within each group based on POTENCY values
-    df['RANK'] = df.groupby('GROUP')['POTENCY'].rank(ascending=True, method='min')
+    df['RANK'] = df.groupby('GROUP')['POTENCY'].rank(ascending=True, method='min')     # Rank the entries within each group based on POTENCY values
 
     # Count the number of entries in each group
     group_counts = df['GROUP'].value_counts().reset_index()
     group_counts.columns = ['GROUP', 'COUNT']
 
-    # Merge the group counts back into the DataFrame
-    df = pd.merge(df, group_counts, on='GROUP')
+    df = pd.merge(df, group_counts, on='GROUP')                                        # Merge the group counts back into the DataFrame
+    df['PROP_IMPROV'] = df['RANK'] / df['COUNT']                                       # Calculate the proportion of molecules with improvement within the same scaffold
 
-    # Calculate the proportion of molecules with improvement within the same scaffold
-    df['PROP_IMPROV'] = df['RANK'] / df['COUNT']
-
-    # Return the modified DataFrame with added 'RANK', 'COUNT', and 'PROP_IMPROV' columns
-    return df
+    return df                                                                          # Return the modified DataFrame with added 'RANK', 'COUNT', and 'PROP_IMPROV' columns
 
 
 def clean_df(df):
@@ -142,9 +125,8 @@ def clean_df(df):
         molecule = Chem.MolFromSmiles(smiles)
         heavy_atom_count = rdMolDescriptors.CalcNumHeavyAtoms(molecule)
         return heavy_atom_count
-
-    # Create a copy of the DataFrame to avoid the SettingWithCopyWarning
-    df_copy = df.copy()
+    
+    df_copy = df.copy()  # Create a copy of the DataFrame to avoid the SettingWithCopyWarning
 
     # Calculate the heavy atom count for each SMILES and Bemis-Murcko scaffold
     df_copy['HeavyAtomCount'] = df_copy['SMILES'].apply(calculate_heavy_atom_count)
@@ -152,26 +134,15 @@ def clean_df(df):
 
     # Iterate through unique targets
     for target in df['TARGET'].unique():
-        # Filter the DataFrame for the current target
-        target_df = df[df['TARGET'] == target]
+        target_df = df[df['TARGET'] == target]                                                                # Filter the DataFrame for the current target
+        group_counts = target_df.groupby('GROUP').size()                                                      # Group by the 'GROUP' column and count the number of members in each group                        
+        small_groups = group_counts[group_counts < 25].index                                                  # Get the groups with fewer than 25 members
+        df_copy = df_copy[~((df_copy['TARGET'] == target) & (df_copy['GROUP'].isin(small_groups)))]           # Remove the small groups from the DataFrame
 
-        # Group by the 'GROUP' column and count the number of members in each group
-        group_counts = target_df.groupby('GROUP').size()
+    df_filtered = df_copy[abs(df_copy['HeavyAtomCount'] - df_copy['BemisMurckoScaffoldHeavyAtomCount']) <= 2] # Filter the DataFrame based on the heavy atom deviation
+    df_filtered.drop(['HeavyAtomCount', 'BemisMurckoScaffoldHeavyAtomCount'], axis=1, inplace=True)           # Remove the extra columns
 
-        # Get the groups with fewer than 25 members
-        small_groups = group_counts[group_counts < 25].index
-
-        # Remove the small groups from the DataFrame
-        df_copy = df_copy[~((df_copy['TARGET'] == target) & (df_copy['GROUP'].isin(small_groups)))]
-
-    # Filter the DataFrame based on the heavy atom deviation
-    df_filtered = df_copy[abs(df_copy['HeavyAtomCount'] - df_copy['BemisMurckoScaffoldHeavyAtomCount']) <= 2]
-
-    # Remove the extra columns
-    df_filtered.drop(['HeavyAtomCount', 'BemisMurckoScaffoldHeavyAtomCount'], axis=1, inplace=True)
-
-    # Return the filtered DataFrame
-    return df_filtered
+    return df_filtered                                                                                        # Return the filtered DataFrame
 
 
 def graph(df, subtitle):
