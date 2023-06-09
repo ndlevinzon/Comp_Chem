@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from rdkit import Chem
+from rdkit.Chem import rdMolDescriptors
 from rdkit.Chem.Scaffolds import MurckoScaffold
 from sqlalchemy import create_engine
 
@@ -133,6 +134,46 @@ def rank_entries(df):
     return df
 
 
+def clean_df(df):
+    """Filters DataFrame for small groups and deviations between SMILES and B-M Scaffold"""
+
+    # Define a function to calculate the heavy atom count
+    def calculate_heavy_atom_count(smiles):
+        molecule = Chem.MolFromSmiles(smiles)
+        heavy_atom_count = rdMolDescriptors.CalcNumHeavyAtoms(molecule)
+        return heavy_atom_count
+
+    # Create a copy of the DataFrame to avoid the SettingWithCopyWarning
+    df_copy = df.copy()
+
+    # Calculate the heavy atom count for each SMILES and Bemis-Murcko scaffold
+    df_copy['HeavyAtomCount'] = df_copy['SMILES'].apply(calculate_heavy_atom_count)
+    df_copy['BemisMurckoScaffoldHeavyAtomCount'] = df_copy['SCAFFOLD'].apply(calculate_heavy_atom_count)
+
+    # Iterate through unique targets
+    for target in df['TARGET'].unique():
+        # Filter the DataFrame for the current target
+        target_df = df[df['TARGET'] == target]
+
+        # Group by the 'GROUP' column and count the number of members in each group
+        group_counts = target_df.groupby('GROUP').size()
+
+        # Get the groups with fewer than 25 members
+        small_groups = group_counts[group_counts < 25].index
+
+        # Remove the small groups from the DataFrame
+        df_copy = df_copy[~((df_copy['TARGET'] == target) & (df_copy['GROUP'].isin(small_groups)))]
+
+    # Filter the DataFrame based on the heavy atom deviation
+    df_filtered = df_copy[abs(df_copy['HeavyAtomCount'] - df_copy['BemisMurckoScaffoldHeavyAtomCount']) <= 2]
+
+    # Remove the extra columns
+    df_filtered.drop(['HeavyAtomCount', 'BemisMurckoScaffoldHeavyAtomCount'], axis=1, inplace=True)
+
+    # Return the filtered DataFrame
+    return df_filtered
+
+
 def graph(df, subtitle):
     """Plot the families sharing the same B-M Scaffold"""
     plt.figure()
@@ -206,11 +247,11 @@ def create_histogram(df, subtitle):
 
 def main():
     # Source CSV from ChEMBL
-    csv_file = 'ligands/O75496/DOWNLOAD-s4J2I-ywcUMLMswllk75v0xJVZYFnVXldsps_qCh0_A=.csv'
+    csv_file = 'ligands/Q9UNA4/DOWNLOAD-rTvoiuJRKQ_g5uD2vsXC9Wni1wpZE_I730Ak9kgxFis=.csv'
     subtitle = 'Glucagon-like peptide 1 receptor, UniProt: P43220'
 
     # Connect to the SQLite database
-    database_file = 'ligands/histogram_data.db'
+    database_file = 'ligands/histogram_data_filtered.db'
     engine = create_engine(f'sqlite:///{database_file}')
 
     # Check if the database file exists
@@ -218,6 +259,7 @@ def main():
         df = read_csv(csv_file=csv_file)
         df = add_scaffold_and_group(df)
         df = rank_entries(df)
+        df = clean_df(df)
 
         # Graph data
         graph(df=df, subtitle=subtitle)
@@ -231,6 +273,7 @@ def main():
         df = read_csv(csv_file=csv_file)
         df = add_scaffold_and_group(df)
         df = rank_entries(df)
+        df = clean_df(df)
 
         # Graph data
         graph(df=df, subtitle=subtitle)
