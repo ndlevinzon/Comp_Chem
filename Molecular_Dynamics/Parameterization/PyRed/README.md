@@ -1,6 +1,5 @@
 # PyRed Tutorial
-
-PyRED Website: https://upjv.q4md-forcefieldtools.org/REDServer-Development/ 
+[PyRED Website](https://upjv.q4md-forcefieldtools.org/REDServer-Development/)
 
 ## Prepare PDB input file(s)
 * Make sure to name the files correctly (i.e. Mol_red$n.pdb where $n = the molecule number (1, 2, …)) 
