@@ -3,6 +3,10 @@ from rdkit import Chem
 from collections import deque
 from rdkit.Chem.rdchem import HybridizationType, BondType
 import pickle
+import time
+
+# Get the current time before running the code
+start_time = time.time()
 
 
 def ring_maker(smiles):
@@ -144,7 +148,7 @@ def main():
     # Specify the input and output file names
     path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/'
     smiles_input_filename = 'smi-zn-ampc-all.smi'
-    output_file_prefix = "rings"
+    output_file_prefix = "with_rings"
 
     # Read the input file and store the smiles and zinc IDs in a DataFrame
     smiles_zinc_input = pd.read_csv(f'{path}{smiles_input_filename}', sep=' ', header=None, names=['Smiles', 'ZincID'])
@@ -193,6 +197,15 @@ def main():
     key_file = f"{path}{output_file_prefix}-key-i{len(smiles_zinc_input)}-o{len(lines_out)}"
     with open(key_file, "wb") as fp:
         pickle.dump(analogue_key, fp)
+
+    # Get the current time after running the code
+    end_time = time.time()
+
+    # Calculate the elapsed time
+    elapsed_time = end_time - start_time
+
+    # Print the runtime
+    print(f"Runtime: {elapsed_time} seconds")
 
 
 if __name__ == '__main__':
