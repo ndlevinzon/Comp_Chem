@@ -19,7 +19,7 @@ def ring_maker(smiles):
     # Store the modified molecules at each step
     modified_mols = [Chem.RWMol(mol)]
 
-    # Create an empty list to store the output SMILES of newly closed structures
+    # Create an empty list to store the output molecules of newly closed structures
     analogs = []
 
     # Iterate over the number of ring closures
@@ -45,18 +45,15 @@ def ring_maker(smiles):
                 if curr_path_length in path_lengths and curr_atom_idx != atom_idx:
                     end_atom = curr_mol.GetAtomWithIdx(curr_atom_idx)
                     if end_atom.GetHybridization() == HybridizationType.SP3:
-                        print(
-                            f"Path length: {curr_path_length}, Final atom: {end_atom.GetSymbol()}, Hybridization: SP3")
+                        # print(
+                        #     f"Path length: {curr_path_length}, Final atom: {end_atom.GetSymbol()}, Hybridization: SP3")
 
                         # Create a new bond between the initial and final atom
                         curr_mol.AddBond(atom_idx, curr_atom_idx, BondType.SINGLE)
 
-                        # Generate the isomeric SMILES for the closed ring structure
-                        isomeric_smiles = Chem.MolToSmiles(curr_mol, isomericSmiles=True)
-                        print(f"Isomeric SMILES: {isomeric_smiles}")
-
-                        # Append the isomeric SMILES to the list of analogs
-                        analogs.append(isomeric_smiles)
+                        # Append the molecule to the list of analogs
+                        analog = curr_mol.GetMol()
+                        analogs.append(analog)
 
                         # Reset the molecule for the next iteration
                         curr_mol = Chem.RWMol(prev_mol)
@@ -75,15 +72,6 @@ def ring_maker(smiles):
 
         # Store the modified molecule for the current step
         modified_mols.append(curr_mol.GetMol())
-
-    # Get the final modified molecule
-    modified_mol = modified_mols[-1]
-
-    # Convert the modified molecule to isomeric SMILES
-    modified_isomeric_smiles = Chem.MolToSmiles(modified_mol, isomericSmiles=True)
-
-    # Print the modified isomeric SMILES
-    print(f"Modified Isomeric SMILES: {modified_isomeric_smiles}")
 
     # Return the list of analogs
     return analogs
@@ -120,7 +108,7 @@ def aromatic_scanning(smiles, atomic_num, n_hs):
                 a.SetAtomicNum(atomic_num)
                 a.SetNumExplicitHs(n_hs)
                 Chem.SanitizeMol(analog)
-                analogs.append(Chem.RemoveHs(analog))
+                analogs.append(analog)
     return analogs
 
 
@@ -142,13 +130,6 @@ def fluorine_scanning(smiles):
 
 
 def main():
-    # Specify the input and output file names
-    path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/'
-    smiles_input_filename = 'rings.smi'
-    output_file_prefix = "rings"
-
-    # Read the input file and store the smiles and zinc IDs in a DataFrame
-    smiles_zinc_input = pd.read_csv(f'{path}{smiles_input_filename}', sep=' ', header=None, names=['Smiles', 'ZincID'])
 
     # Define the analogue methods and their corresponding names
     analogue_methods = [
@@ -160,9 +141,17 @@ def main():
         [fluorine_scanning, "f-scan"]
     ]
 
+    # Specify the input and output file names
+    path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/'
+    smiles_input_filename = 'smi-zn-ampc-all.smi'
+    output_file_prefix = "rings"
+
+    # Read the input file and store the smiles and zinc IDs in a DataFrame
+    smiles_zinc_input = pd.read_csv(f'{path}{smiles_input_filename}', sep=' ', header=None, names=['Smiles', 'ZincID'])
+
     analogue_key = []
     lines_out = []
-    x = 0
+    analog_count = 0
 
     # Loop through each input molecule
     for _, row in smiles_zinc_input.iterrows():
@@ -179,17 +168,16 @@ def main():
 
             # Generate analogues using the specified method
             for analogue in method[0](smiles):
-                analogue_mol = Chem.MolFromSmiles(analogue)
-                a = Chem.MolToSmiles(analogue_mol, isomericSmiles=True)
+                analogue_smiles = Chem.MolToSmiles(analogue, isomericSmiles=True)
 
-                if a not in all_analogues:
-                    fakezinc = "fakezinc" + str(x).zfill(8)
-                    lines_out.append(f"{a} {fakezinc}")
-                    analogue_key_scan[1].append([a, fakezinc])
-                    all_analogues.append(a)
-                    x += 1
+                if analogue_smiles not in all_analogues:
+                    fakezinc = "fakezinc" + str(analog_count).zfill(8)
+                    lines_out.append(f"{analogue_smiles} {fakezinc}")
+                    analogue_key_scan[1].append([analogue_smiles, fakezinc])
+                    all_analogues.append(analogue_smiles)
+                    analog_count += 1
                 else:
-                    print(a)
+                    print(analogue_smiles)
 
             analogue_key_line[1].append(analogue_key_scan)
 
