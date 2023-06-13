@@ -39,7 +39,9 @@ foreach my $newdirectory ( <$home/*> )
 		foreach my $pdbfile ( glob  "$newdirectory/*.pdb" ) 
 		{
 			($file,$dir,$ext) = fileparse($pdbfile, qr/\.[^.]*/);
-			@extensions = (".pdb", ".com", "_opt.com", "_HF631Gs_charge_nosym.com", "_opt.chk", "_HF631Gs_charge_nosym.chk", "_HF631Gs_charge_nosym.log", "_HF631Gs_charge_nosym.mol2", ".frcmod", ".tleap", ".lib");
+			@extensions = (".pdb", ".com", "_opt.com", "_HF631Gs_charge_nosym.com",
+				       "_opt.chk", "_HF631Gs_charge_nosym.chk", "_HF631Gs_charge_nosym.log",
+				       "_HF631Gs_charge_nosym.mol2", ".frcmod", ".tleap", ".lib");
 			my $pdb             = $file.$extensions[0];
 			my $com             = $file.$extensions[1];
 			my $opt             = $file.$extensions[2];
