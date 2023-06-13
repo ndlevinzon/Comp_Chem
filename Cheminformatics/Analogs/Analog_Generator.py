@@ -1,3 +1,4 @@
+import pandas as pd
 from rdkit import Chem
 from collections import deque
 from rdkit.Chem.rdchem import HybridizationType, BondType
@@ -146,13 +147,8 @@ def main():
     smiles_input_filename = 'rings.smi'
     output_file_prefix = "rings"
 
-    smiles_zinc_input = []
-
-    # Read the input file and store the smiles and zinc IDs
-    with open(f'{path}{smiles_input_filename}', "r") as f1:
-        for line in f1:
-            input_line = line.split(" ")
-            smiles_zinc_input.append([input_line[0], input_line[1].strip()])
+    # Read the input file and store the smiles and zinc IDs in a DataFrame
+    smiles_zinc_input = pd.read_csv(f'{path}{smiles_input_filename}', sep=' ', header=None, names=['Smiles', 'ZincID'])
 
     # Define the analogue methods and their corresponding names
     analogue_methods = [
@@ -169,11 +165,12 @@ def main():
     x = 0
 
     # Loop through each input molecule
-    for smiles_zinc in smiles_zinc_input:
-        print(smiles_zinc[0])
-        lines_out.append(smiles_zinc[0] + " " + smiles_zinc[1])
+    for _, row in smiles_zinc_input.iterrows():
+        smiles = row['Smiles']
+        zinc_id = row['ZincID']
 
-        analogue_key_line = [[smiles_zinc[0], smiles_zinc[1]], []]
+        lines_out.append(f"{smiles} {zinc_id}")
+        analogue_key_line = [[smiles, zinc_id], []]
         all_analogues = []
 
         # Loop through each analogue method
@@ -181,13 +178,13 @@ def main():
             analogue_key_scan = [method[1], []]
 
             # Generate analogues using the specified method
-            for analogue in method[0](smiles_zinc[0]):
+            for analogue in method[0](smiles):
                 analogue_mol = Chem.MolFromSmiles(analogue)
                 a = Chem.MolToSmiles(analogue_mol, isomericSmiles=True)
 
                 if a not in all_analogues:
                     fakezinc = "fakezinc" + str(x).zfill(8)
-                    lines_out.append(a + " " + fakezinc)
+                    lines_out.append(f"{a} {fakezinc}")
                     analogue_key_scan[1].append([a, fakezinc])
                     all_analogues.append(a)
                     x += 1
