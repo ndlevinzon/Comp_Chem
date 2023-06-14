@@ -1,12 +1,88 @@
+import pickle
+import time
+import re
 import pandas as pd
 from rdkit import Chem
 from collections import deque
+from rdkit.Chem import AllChem
 from rdkit.Chem.rdchem import HybridizationType, BondType
-import pickle
-import time
+
 
 # Get the current time before running the code
 start_time = time.time()
+
+
+# Function to remove duplicates from a list of molecules
+def remove_duplicates(analogs):
+    unique_molecules = []
+    for molecule in analogs:
+        smiles = Chem.MolToSmiles(molecule)
+        if smiles not in unique_molecules:
+            unique_molecules.append(smiles)
+    return unique_molecules
+
+
+def ring_breaker(smiles):
+    # Create the molecule from SMILES
+    mol = Chem.MolFromSmiles(smiles)
+
+    # Generate a 2D depiction of the molecule (optional)
+    AllChem.Compute2DCoords(mol)
+
+    # Adjust valence of the molecule
+    Chem.SanitizeMol(mol, sanitizeOps=Chem.SanitizeFlags.SANITIZE_ADJUSTHS)
+
+    # Disable kekulization
+    Chem.Kekulize(mol, clearAromaticFlags=True)
+
+    # Enumerate all cycles within the molecule
+    cycles = Chem.GetSymmSSSR(mol)
+
+    # Break each bond within each cycle
+    analogs = []
+    for cycle in cycles:
+        for i in range(len(cycle)):
+            atom1 = cycle[i]
+            atom2 = cycle[(i + 1) % len(cycle)]
+
+            # Create a copy of the molecule
+            mol_copy = Chem.RWMol(mol)
+
+            # Remove the bond
+            bond = mol_copy.GetBondBetweenAtoms(atom1, atom2)
+            mol_copy.RemoveBond(atom1, atom2)
+
+            # Add new atoms and bonds based on modified adjacency matrix
+            adjacency_matrix = Chem.GetAdjacencyMatrix(mol_copy)
+            for j in range(len(adjacency_matrix)):
+                for k in range(j + 1, len(adjacency_matrix)):
+                    if adjacency_matrix[j][k] and not mol_copy.GetBondBetweenAtoms(j, k):
+                        mol_copy.AddBond(j, k, Chem.BondType.SINGLE)
+
+            # Update the molecule properties and sanitize
+            mol_copy.UpdatePropertyCache(strict=False)
+            try:
+                Chem.SanitizeMol(mol_copy, sanitizeOps=Chem.SanitizeFlags.SANITIZE_ADJUSTHS)
+                Chem.Kekulize(mol_copy)
+                sanitized_analogs = []
+                sanitized_analogs.append(mol_copy)
+                for analog in sanitized_analogs:
+                    Chem.GetSymmSSSR(analog)
+                    smiles = Chem.MolToSmiles(analog, isomericSmiles=True)
+                    smiles = re.sub(r'\(\)', '', smiles)  # Remove empty parentheses
+                    smiles = re.sub(r'\[.*?\]', '', smiles)  # Remove brackets denoting bond breakages
+                    if smiles.startswith('*'):  # Check if SMILES starts with *
+                        smiles = smiles[1:]  # Remove the asterisk character from the beginning
+                    sanitized_analog = Chem.MolFromSmiles(smiles)
+                    if sanitized_analog is not None:
+                        analogs.append(sanitized_analog)
+            except:
+                pass
+
+    # Remove duplicates from the list of analogs
+    remove_duplicates(analogs)
+
+    return analogs
 
 
 def ring_maker(smiles):
@@ -49,8 +125,9 @@ def ring_maker(smiles):
                 if curr_path_length in path_lengths and curr_atom_idx != atom_idx:
                     end_atom = curr_mol.GetAtomWithIdx(curr_atom_idx)
                     if end_atom.GetHybridization() == HybridizationType.SP3:
-                        # print(
-                        #     f"Path length: {curr_path_length}, Final atom: {end_atom.GetSymbol()}, Hybridization: SP3")
+                        # print(f"Path length: {curr_path_length},
+                        # Final atom: {end_atom.GetSymbol()},
+                        # Hybridization: SP3")
 
                         # Create a new bond between the initial and final atom
                         curr_mol.AddBond(atom_idx, curr_atom_idx, BondType.SINGLE)
@@ -76,6 +153,9 @@ def ring_maker(smiles):
 
         # Store the modified molecule for the current step
         modified_mols.append(curr_mol.GetMol())
+
+    # Remove duplicates from the list of analogs
+    remove_duplicates(analogs)
 
     # Return the list of analogs
     return analogs
@@ -137,6 +217,7 @@ def main():
 
     # Define the analogue methods and their corresponding names
     analogue_methods = [
+        [ring_breaker, "ring_opening"],
         [ring_maker, "ring_closure"],
         [nitrogen_scanning, "n-scan"],
         [methyl_scanning, "ch3-scan"],
@@ -148,7 +229,7 @@ def main():
     # Specify the input and output file names
     path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/'
     smiles_input_filename = 'smi-zn-ampc-all.smi'
-    output_file_prefix = "with_rings"
+    output_file_prefix = "with_rings_o_c"
 
     # Read the input file and store the smiles and zinc IDs in a DataFrame
     smiles_zinc_input = pd.read_csv(f'{path}{smiles_input_filename}', sep=' ', header=None, names=['Smiles', 'ZincID'])
