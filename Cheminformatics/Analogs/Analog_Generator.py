@@ -10,6 +10,7 @@ from rdkit.Chem.rdchem import HybridizationType, BondType
 
 # Get the current time before running the code
 start_time = time.time()
+print(f"Starting Time: {start_time}")
 
 
 # Function to remove duplicates from a list of molecules
@@ -20,6 +21,39 @@ def remove_duplicates(analogs):
         if smiles not in unique_molecules:
             unique_molecules.append(smiles)
     return unique_molecules
+
+
+def BO_stepdown(smiles):
+    # Convert SMILES to molecule and kekulize the molecule to include explicit bond notation
+    mol = Chem.MolFromSmiles(smiles)
+    Chem.Kekulize(mol)
+
+    rw_mol = Chem.RWMol(mol)
+
+    # Create a list of bond indices for carbon-carbon double bonds
+    c_c_double_bond_indices = [bond.GetIdx() for bond in rw_mol.GetBonds() if
+                               bond.GetBeginAtom().GetAtomicNum() == 6 and bond.GetEndAtom().GetAtomicNum() == 6
+                               and bond.GetBondType() == Chem.BondType.DOUBLE]
+
+    analogs = []  # Empty list to store the generated analogs
+
+    # Recursive function to decrease bond order
+    def decrease_bond_order_recursive(bond_indices, mol_copy):
+        if not bond_indices:
+            analogs.append(mol_copy.GetMol())  # Append the modified molecule to the analogs list
+            return
+
+        bond_idx = bond_indices[0]
+        bond = mol_copy.GetBondWithIdx(bond_idx)
+        bond.SetBondType(Chem.BondType.SINGLE)
+
+        decrease_bond_order_recursive(bond_indices[1:], mol_copy)  # Recursive call with remaining bonds
+        bond.SetBondType(Chem.BondType.DOUBLE)
+        decrease_bond_order_recursive(bond_indices[1:], mol_copy)  # Recursive call with the bond set to double again
+
+    decrease_bond_order_recursive(c_c_double_bond_indices, rw_mol)
+
+    return analogs
 
 
 def ring_breaker(smiles):
@@ -217,6 +251,7 @@ def main():
 
     # Define the analogue methods and their corresponding names
     analogue_methods = [
+        [BO_stepdown, "decrease_bond_order"],
         [ring_breaker, "ring_opening"],
         [ring_maker, "ring_closure"],
         [nitrogen_scanning, "n-scan"],
@@ -229,7 +264,7 @@ def main():
     # Specify the input and output file names
     path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/'
     smiles_input_filename = 'smi-zn-ampc-all.smi'
-    output_file_prefix = "with_rings_o_c"
+    output_file_prefix = "with_rings_o_c_BOsd"
 
     # Read the input file and store the smiles and zinc IDs in a DataFrame
     smiles_zinc_input = pd.read_csv(f'{path}{smiles_input_filename}', sep=' ', header=None, names=['Smiles', 'ZincID'])
@@ -279,14 +314,14 @@ def main():
     with open(key_file, "wb") as fp:
         pickle.dump(analogue_key, fp)
 
-    # Get the current time after running the code
-    end_time = time.time()
-
     # Calculate the elapsed time
+    end_time = time.time()
     elapsed_time = end_time - start_time
-
-    # Print the runtime
     print(f"Runtime: {elapsed_time} seconds")
+
+    # Calculate molecules generated per second
+    benchmark = float(len(lines_out))/elapsed_time
+    print(f"Benchmark: {benchmark} molecules/second")
 
 
 if __name__ == '__main__':
