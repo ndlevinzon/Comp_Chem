@@ -2,15 +2,64 @@ import pickle
 import time
 import re
 import pandas as pd
-from rdkit import Chem
 from collections import deque
+from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem.rdchem import HybridizationType, BondType
+from rdkit.Chem.Scaffolds import MurckoScaffold
 
 
 # Get the current time before running the code
 start_time = time.time()
 print(f"Starting Time: {start_time}")
+
+
+def trim_to_bemis_murcko_scaffold(smiles):
+    # Convert the SMILES code to a molecule object
+    mol = Chem.MolFromSmiles(smiles)
+
+    # Generate the Bemis-Murcko scaffold
+    scaffold = MurckoScaffold.GetScaffoldForMol(mol)
+
+    # Create a copy of the molecule to trim
+    trimmed_mol = Chem.RWMol(mol)
+
+    def get_atom_degree(mol, atom_idx):
+        # Count the number of neighboring bonds for the atom
+        degree = 0
+        for bond in mol.GetAtomWithIdx(atom_idx).GetBonds():
+            if bond.GetBeginAtomIdx() == atom_idx or bond.GetEndAtomIdx() == atom_idx:
+                degree += 1
+        return degree
+
+    # Get the atom indices for extremities
+    extremity_atoms = set(atom.GetIdx() for atom in trimmed_mol.GetAtoms()
+                          if get_atom_degree(trimmed_mol, atom.GetIdx()) == 1)
+
+    # List to store the trimmed molecules
+    analogs = []
+
+    # Trim the molecule until it matches the scaffold
+    while Chem.MolToSmiles(trimmed_mol) != Chem.MolToSmiles(scaffold):
+        # Check if there are no extremity atoms left
+        if not extremity_atoms:
+            break
+
+        # Remove one atom at a time from the extremities
+        atom_idx = extremity_atoms.pop()
+        trimmed_mol.RemoveAtom(atom_idx)
+
+        # Update the extremity atoms for the trimmed molecule
+        extremity_atoms = set(atom.GetIdx() for atom in trimmed_mol.GetAtoms()
+                              if get_atom_degree(trimmed_mol, atom.GetIdx()) == 1)
+
+        # Convert the RWMol back to a Mol object for storage
+        analogs.append(trimmed_mol.GetMol())
+
+    # Convert the list of RWMol objects to a set to remove duplicates
+    analogs = list(set(analogs))
+
+    return analogs
 
 
 def BO_stepup(smiles):
@@ -234,10 +283,10 @@ def nitrogen_scanning(smiles, target_num=7):
                 a.SetAtomicNum(target_num)
                 Chem.SanitizeMol(analog)
                 analogs.append(analog)
-                
+
     # Convert the list of RWMol objects to a set to remove duplicates
     analogs = list(set(analogs))
-    
+
     return analogs
 
 
@@ -257,10 +306,10 @@ def aromatic_scanning(smiles, atomic_num, n_hs):
                 a.SetNumExplicitHs(n_hs)
                 Chem.SanitizeMol(analog)
                 analogs.append(analog)
-                
+
     # Convert the list of RWMol objects to a set to remove duplicates
     analogs = list(set(analogs))
-    
+
     return analogs
 
 
@@ -285,10 +334,11 @@ def main():
 
     # Define the analogue methods and their corresponding names
     analogue_methods = [
-        [BO_stepup, "increase_bond_order"],
-        [BO_stepdown, "decrease_bond_order"],
-        [ring_breaker, "ring_opening"],
-        [ring_maker, "ring_closure"],
+        [trim_to_bemis_murcko_scaffold, "trim-to-BM-scaffold"],
+        [BO_stepup, "increase-bond-order"],
+        [BO_stepdown, "decrease-bond-order"],
+        [ring_breaker, "ring-opening"],
+        [ring_maker, "ring-closure"],
         [nitrogen_scanning, "n-scan"],
         [methyl_scanning, "ch3-scan"],
         [amine_scanning, "nh2-scan"],
@@ -299,7 +349,7 @@ def main():
     # Specify the input and output file names
     path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/'
     smiles_input_filename = 'smi-zn-ampc-all.smi'
-    output_file_prefix = "with_rings_o_c_BOsd_BOsu"
+    output_file_prefix = "trimmer"
 
     # Read the input file and store the smiles and zinc IDs in a DataFrame
     smiles_zinc_input = pd.read_csv(f'{path}{smiles_input_filename}', sep=' ', header=None, names=['Smiles', 'ZincID'])
