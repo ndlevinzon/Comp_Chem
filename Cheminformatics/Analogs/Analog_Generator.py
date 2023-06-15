@@ -1,10 +1,12 @@
 import pickle
+import math
 import time
 import re
 import pandas as pd
+from PIL import Image, ImageDraw
 from collections import deque
 from rdkit import Chem
-from rdkit.Chem import AllChem
+from rdkit.Chem import AllChem, Draw
 from rdkit.Chem.rdchem import HybridizationType, BondType
 from rdkit.Chem.Scaffolds import MurckoScaffold
 
@@ -15,6 +17,7 @@ print(f"Starting Time: {start_time}")
 
 
 def trim_to_bemis_murcko_scaffold(smiles):
+    """Trims Parent Molecule Extremities Until Remainder == Bemis-Murcko Scaffold"""
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
 
@@ -63,34 +66,46 @@ def trim_to_bemis_murcko_scaffold(smiles):
 
 
 def BO_stepup(smiles):
+    """Recursively Increases Bond Order Until Maximum Conjugation"""
+    # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
+
+    # Create a copy of the molecule as an RWMol object
     rw_mol = Chem.RWMol(mol)
 
+    # Find indices of carbon-carbon single bonds
     c_c_bond_indices = [bond.GetIdx() for bond in rw_mol.GetBonds() if
                         bond.GetBeginAtom().GetAtomicNum() == 6 and bond.GetEndAtom().GetAtomicNum() == 6
                         and bond.GetBondType() == Chem.BondType.SINGLE]
 
+    # List to store the analog molecules
     analogs = []
 
     def increase_bond_order_recursive(bond_indices, mol_copy):
+        # Base case: no more bond indices to process
         if not bond_indices:
             analogs.append(Chem.RWMol(mol_copy))
             return
 
+        # Process the first bond index
         bond_idx = bond_indices[0]
         bond = mol_copy.GetBondWithIdx(bond_idx)
 
         mol_copy_new = Chem.RWMol(mol_copy)
 
         if bond.GetBondType() == Chem.BondType.SINGLE:
+            # Increase bond order from single to double
             mol_copy_new.GetBondWithIdx(bond_idx).SetBondType(Chem.BondType.DOUBLE)
             increase_bond_order_recursive(bond_indices[1:], mol_copy_new)
         elif bond.GetBondType() == Chem.BondType.DOUBLE:
+            # Increase bond order from double to triple
             mol_copy_new.GetBondWithIdx(bond_idx).SetBondType(Chem.BondType.TRIPLE)
             increase_bond_order_recursive(bond_indices[1:], mol_copy_new)
 
+        # Process the next bond index without changing the current molecule copy
         increase_bond_order_recursive(bond_indices[1:], Chem.RWMol(mol_copy))
 
+    # Start the recursive function to increase bond order
     increase_bond_order_recursive(c_c_bond_indices, rw_mol)
 
     # Convert the list of RWMol objects to a set to remove duplicates
@@ -100,29 +115,40 @@ def BO_stepup(smiles):
 
 
 def BO_stepdown(smiles):
+    """Recursively Changes Bond Order Until All Bonds Are Single"""
+    # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
+
+    # Create a copy of the molecule as an RWMol object
     rw_mol = Chem.RWMol(mol)
 
+    # Find indices of carbon-carbon bonds
     c_c_bond_indices = [bond.GetIdx() for bond in rw_mol.GetBonds() if
                         bond.GetBeginAtom().GetAtomicNum() == 6 and bond.GetEndAtom().GetAtomicNum() == 6]
 
+    # List to store the analog molecules
     analogs = []
 
     def decrease_bond_order_recursive(bond_indices, mol_copy):
+        # Base case: no more bond indices to process
         if not bond_indices:
             analogs.append(Chem.RWMol(mol_copy))
             return
 
+        # Process the first bond index
         bond_idx = bond_indices[0]
         bond = mol_copy.GetBondWithIdx(bond_idx)
 
         for new_bond_order in range(int(bond.GetBondTypeAsDouble()) - 1, 0, -1):
+            # Create a new molecule copy with decreased bond order
             mol_copy_new = Chem.RWMol(mol_copy)
             mol_copy_new.GetBondWithIdx(bond_idx).SetBondType(Chem.BondType(new_bond_order))
             decrease_bond_order_recursive(bond_indices[1:], mol_copy_new)
 
+        # Process the next bond index without changing the current molecule copy
         decrease_bond_order_recursive(bond_indices[1:], Chem.RWMol(mol_copy))
 
+    # Start the recursive function to decrease bond order
     decrease_bond_order_recursive(c_c_bond_indices, rw_mol)
 
     # Convert the list of RWMol objects to a set to remove duplicates
@@ -132,6 +158,7 @@ def BO_stepdown(smiles):
 
 
 def ring_breaker(smiles):
+    """Enumerates Rings In Parent And Opens Rings"""
     # Create the molecule from SMILES
     mol = Chem.MolFromSmiles(smiles)
 
@@ -147,8 +174,10 @@ def ring_breaker(smiles):
     # Enumerate all cycles within the molecule
     cycles = Chem.GetSymmSSSR(mol)
 
-    # Break each bond within each cycle
+    # List to store the analog molecules
     analogs = []
+
+    # Iterate over each cycle and break the bonds
     for cycle in cycles:
         for i in range(len(cycle)):
             atom1 = cycle[i]
@@ -157,7 +186,7 @@ def ring_breaker(smiles):
             # Create a copy of the molecule
             mol_copy = Chem.RWMol(mol)
 
-            # Remove the bond
+            # Remove the bond between atom1 and atom2
             bond = mol_copy.GetBondBetweenAtoms(atom1, atom2)
             mol_copy.RemoveBond(atom1, atom2)
 
@@ -173,6 +202,8 @@ def ring_breaker(smiles):
             try:
                 Chem.SanitizeMol(mol_copy, sanitizeOps=Chem.SanitizeFlags.SANITIZE_ADJUSTHS)
                 Chem.Kekulize(mol_copy)
+
+                # Process sanitized analogs
                 sanitized_analogs = []
                 sanitized_analogs.append(mol_copy)
                 for analog in sanitized_analogs:
@@ -195,6 +226,7 @@ def ring_breaker(smiles):
 
 
 def ring_maker(smiles):
+    """Enumerates Terminal -CH3, Finds Paths Of Length (4, 5) And Forms Rings With sp3 Carbons On Path"""
     # Create the molecule from SMILES
     mol = Chem.MolFromSmiles(smiles)
 
@@ -270,8 +302,8 @@ def ring_maker(smiles):
     return analogs
 
 
-# Function to perform nitrogen scanning on a molecule
 def nitrogen_scanning(smiles, target_num=7):
+    """Performs Nitrogen Scanning On Parent"""
     mol = Chem.MolFromSmiles(smiles)
     analogs = []
     for atom in mol.GetAtoms():
@@ -290,8 +322,8 @@ def nitrogen_scanning(smiles, target_num=7):
     return analogs
 
 
-# Function to perform aromatic scanning with different atomic numbers and hydrogen counts
 def aromatic_scanning(smiles, atomic_num, n_hs):
+    """Performs Aromatic Scanning With Different Atomic Numbers And Hydrogen Counts"""
     mol = Chem.AddHs(Chem.MolFromSmiles(smiles))
     analogs = []
     for atom in mol.GetAtoms():
@@ -331,18 +363,17 @@ def fluorine_scanning(smiles):
 
 
 def main():
-
     # Define the analogue methods and their corresponding names
     analogue_methods = [
-        [trim_to_bemis_murcko_scaffold, "trim-to-BM-scaffold"],
-        [BO_stepup, "increase-bond-order"],
-        [BO_stepdown, "decrease-bond-order"],
-        [ring_breaker, "ring-opening"],
-        [ring_maker, "ring-closure"],
-        [nitrogen_scanning, "n-scan"],
-        [methyl_scanning, "ch3-scan"],
-        [amine_scanning, "nh2-scan"],
-        [hydroxyl_scanning, "oh-scan"],
+        # [trim_to_bemis_murcko_scaffold, "trim-to-BM-scaffold"],
+        # [BO_stepup, "increase-bond-order"],
+        # [BO_stepdown, "decrease-bond-order"],
+        # [ring_breaker, "ring-opening"],
+        # [ring_maker, "ring-closure"],
+        # [nitrogen_scanning, "n-scan"],
+        # [methyl_scanning, "ch3-scan"],
+        # [amine_scanning, "nh2-scan"],
+        # [hydroxyl_scanning, "oh-scan"],
         [fluorine_scanning, "f-scan"]
     ]
 
@@ -394,6 +425,49 @@ def main():
         for line in lines_out:
             f2.write(line + "\n")
 
+    # Define the list of parent SMILES to take pictures of
+    take_picture = ["O=c1[nH]ccn1-c1ccc(NS(=O)(=O)c2cc(Cl)cc(Cl)c2O)cc1"]  # Add your desired parent SMILES here
+    # Generate and save the grid image for each parent SMILES in take_picture
+    for analogue_line in analogue_key:
+        parent_smiles = analogue_line[0][0]
+        if parent_smiles in take_picture:
+            for analogue_method in analogue_line[1]:
+                method = analogue_method[0]
+                analogue_data = analogue_method[1]
+
+                # Create a list to store analogue images
+                analogue_images = []
+
+                # Loop through the analogues and add them to the list
+                for analogue in analogue_data:
+                    analogue_smiles = analogue[0]
+                    fakezinc = analogue[1]
+                    mol = Chem.MolFromSmiles(analogue_smiles)
+                    img = Draw.MolToImage(mol, size=(500, 500))
+                    analogue_images.append(img)
+
+                # Determine the dimensions of the grid
+                num_analogues = len(analogue_images)
+                num_rows = min(10, int(math.ceil(num_analogues / 10)))
+                num_cols = min(10, num_analogues)
+
+                # Create the grid image
+                grid_image = Image.new('RGB', (num_cols * 500, num_rows * 500))
+
+                # Loop through the analogues and paste them into the grid
+                for i, analogue_image in enumerate(analogue_images):
+                    col_idx = i % 10
+                    row_idx = i // 10
+                    grid_image.paste(analogue_image, (col_idx * 500, row_idx * 500))
+
+                # Add the parent SMILES and method label to the top of the image
+                draw = ImageDraw.Draw(grid_image)
+                label = f"Parent SMILES: {parent_smiles}\nMethod: {method}"
+                draw.text((10, 10), label, fill="white")
+
+                # Save the grid image as a PNG file
+                grid_image.save(f"{path}{output_file_prefix}-{parent_smiles}-{method}.png")
+
     # Write the key specifying which molecules are analogues of which other molecules and by which analoging processes
     key_file = f"{path}{output_file_prefix}-key-i{len(smiles_zinc_input)}-o{len(lines_out)}"
     with open(key_file, "wb") as fp:
@@ -405,7 +479,7 @@ def main():
     print(f"Runtime: {elapsed_time} seconds")
 
     # Calculate molecules generated per second
-    benchmark = float(len(lines_out))/elapsed_time
+    benchmark = float(len(lines_out)) / elapsed_time
     print(f"Benchmark: {benchmark} molecules/second")
 
 
