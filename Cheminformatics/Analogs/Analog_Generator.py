@@ -13,45 +13,71 @@ start_time = time.time()
 print(f"Starting Time: {start_time}")
 
 
-# Function to remove duplicates from a list of molecules
-def remove_duplicates(analogs):
-    unique_molecules = []
-    for molecule in analogs:
-        smiles = Chem.MolToSmiles(molecule)
-        if smiles not in unique_molecules:
-            unique_molecules.append(smiles)
-    return unique_molecules
-
-
-def BO_stepdown(smiles):
-    # Convert SMILES to molecule and kekulize the molecule to include explicit bond notation
+def BO_stepup(smiles):
     mol = Chem.MolFromSmiles(smiles)
-    Chem.Kekulize(mol)
-
     rw_mol = Chem.RWMol(mol)
 
-    # Create a list of bond indices for carbon-carbon double bonds
-    c_c_double_bond_indices = [bond.GetIdx() for bond in rw_mol.GetBonds() if
-                               bond.GetBeginAtom().GetAtomicNum() == 6 and bond.GetEndAtom().GetAtomicNum() == 6
-                               and bond.GetBondType() == Chem.BondType.DOUBLE]
+    c_c_bond_indices = [bond.GetIdx() for bond in rw_mol.GetBonds() if
+                        bond.GetBeginAtom().GetAtomicNum() == 6 and bond.GetEndAtom().GetAtomicNum() == 6
+                        and bond.GetBondType() == Chem.BondType.SINGLE]
 
-    analogs = []  # Empty list to store the generated analogs
+    analogs = []
 
-    # Recursive function to decrease bond order
-    def decrease_bond_order_recursive(bond_indices, mol_copy):
+    def increase_bond_order_recursive(bond_indices, mol_copy):
         if not bond_indices:
-            analogs.append(mol_copy.GetMol())  # Append the modified molecule to the analogs list
+            analogs.append(Chem.RWMol(mol_copy))
             return
 
         bond_idx = bond_indices[0]
         bond = mol_copy.GetBondWithIdx(bond_idx)
-        bond.SetBondType(Chem.BondType.SINGLE)
 
-        decrease_bond_order_recursive(bond_indices[1:], mol_copy)  # Recursive call with remaining bonds
-        bond.SetBondType(Chem.BondType.DOUBLE)
-        decrease_bond_order_recursive(bond_indices[1:], mol_copy)  # Recursive call with the bond set to double again
+        mol_copy_new = Chem.RWMol(mol_copy)
 
-    decrease_bond_order_recursive(c_c_double_bond_indices, rw_mol)
+        if bond.GetBondType() == Chem.BondType.SINGLE:
+            mol_copy_new.GetBondWithIdx(bond_idx).SetBondType(Chem.BondType.DOUBLE)
+            increase_bond_order_recursive(bond_indices[1:], mol_copy_new)
+        elif bond.GetBondType() == Chem.BondType.DOUBLE:
+            mol_copy_new.GetBondWithIdx(bond_idx).SetBondType(Chem.BondType.TRIPLE)
+            increase_bond_order_recursive(bond_indices[1:], mol_copy_new)
+
+        increase_bond_order_recursive(bond_indices[1:], Chem.RWMol(mol_copy))
+
+    increase_bond_order_recursive(c_c_bond_indices, rw_mol)
+
+    # Convert the list of RWMol objects to a set to remove duplicates
+    analogs = list(set(analogs))
+
+    return analogs
+
+
+def BO_stepdown(smiles):
+    mol = Chem.MolFromSmiles(smiles)
+    rw_mol = Chem.RWMol(mol)
+
+    c_c_bond_indices = [bond.GetIdx() for bond in rw_mol.GetBonds() if
+                        bond.GetBeginAtom().GetAtomicNum() == 6 and bond.GetEndAtom().GetAtomicNum() == 6]
+
+    analogs = []
+
+    def decrease_bond_order_recursive(bond_indices, mol_copy):
+        if not bond_indices:
+            analogs.append(Chem.RWMol(mol_copy))
+            return
+
+        bond_idx = bond_indices[0]
+        bond = mol_copy.GetBondWithIdx(bond_idx)
+
+        for new_bond_order in range(int(bond.GetBondTypeAsDouble()) - 1, 0, -1):
+            mol_copy_new = Chem.RWMol(mol_copy)
+            mol_copy_new.GetBondWithIdx(bond_idx).SetBondType(Chem.BondType(new_bond_order))
+            decrease_bond_order_recursive(bond_indices[1:], mol_copy_new)
+
+        decrease_bond_order_recursive(bond_indices[1:], Chem.RWMol(mol_copy))
+
+    decrease_bond_order_recursive(c_c_bond_indices, rw_mol)
+
+    # Convert the list of RWMol objects to a set to remove duplicates
+    analogs = list(set(analogs))
 
     return analogs
 
@@ -113,8 +139,8 @@ def ring_breaker(smiles):
             except:
                 pass
 
-    # Remove duplicates from the list of analogs
-    remove_duplicates(analogs)
+    # Convert the list of RWMol objects to a set to remove duplicates
+    analogs = list(set(analogs))
 
     return analogs
 
@@ -188,8 +214,8 @@ def ring_maker(smiles):
         # Store the modified molecule for the current step
         modified_mols.append(curr_mol.GetMol())
 
-    # Remove duplicates from the list of analogs
-    remove_duplicates(analogs)
+    # Convert the list of RWMol objects to a set to remove duplicates
+    analogs = list(set(analogs))
 
     # Return the list of analogs
     return analogs
@@ -208,6 +234,10 @@ def nitrogen_scanning(smiles, target_num=7):
                 a.SetAtomicNum(target_num)
                 Chem.SanitizeMol(analog)
                 analogs.append(analog)
+                
+    # Convert the list of RWMol objects to a set to remove duplicates
+    analogs = list(set(analogs))
+    
     return analogs
 
 
@@ -227,6 +257,10 @@ def aromatic_scanning(smiles, atomic_num, n_hs):
                 a.SetNumExplicitHs(n_hs)
                 Chem.SanitizeMol(analog)
                 analogs.append(analog)
+                
+    # Convert the list of RWMol objects to a set to remove duplicates
+    analogs = list(set(analogs))
+    
     return analogs
 
 
@@ -251,6 +285,7 @@ def main():
 
     # Define the analogue methods and their corresponding names
     analogue_methods = [
+        [BO_stepup, "increase_bond_order"],
         [BO_stepdown, "decrease_bond_order"],
         [ring_breaker, "ring_opening"],
         [ring_maker, "ring_closure"],
@@ -264,7 +299,7 @@ def main():
     # Specify the input and output file names
     path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/'
     smiles_input_filename = 'smi-zn-ampc-all.smi'
-    output_file_prefix = "with_rings_o_c_BOsd"
+    output_file_prefix = "with_rings_o_c_BOsd_BOsu"
 
     # Read the input file and store the smiles and zinc IDs in a DataFrame
     smiles_zinc_input = pd.read_csv(f'{path}{smiles_input_filename}', sep=' ', header=None, names=['Smiles', 'ZincID'])
