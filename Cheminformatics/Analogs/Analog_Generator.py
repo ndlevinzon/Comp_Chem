@@ -8,7 +8,6 @@ from collections import deque
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw
 from rdkit.Chem.rdchem import HybridizationType, BondType
-from rdkit.Chem.Scaffolds import MurckoScaffold
 
 
 # Get the current time before running the code
@@ -16,13 +15,11 @@ start_time = time.time()
 print(f"Starting Time: {start_time}")
 
 
-def trim_to_bemis_murcko_scaffold(smiles):
-    """Trims Parent Molecule Extremities Until Remainder == Bemis-Murcko Scaffold"""
+def trim_extremities(smiles):
+    """Trim Parent Molecule Extremity Atoms Once"""
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
-
-    # Generate the Bemis-Murcko scaffold
-    scaffold = MurckoScaffold.GetScaffoldForMol(mol)
+    analogs = []
 
     # Create a copy of the molecule to trim
     trimmed_mol = Chem.RWMol(mol)
@@ -36,32 +33,24 @@ def trim_to_bemis_murcko_scaffold(smiles):
         return degree
 
     # Get the atom indices for extremities
-    extremity_atoms = set(atom.GetIdx() for atom in trimmed_mol.GetAtoms()
-                          if get_atom_degree(trimmed_mol, atom.GetIdx()) == 1)
+    extremity_atoms = [atom.GetIdx() for atom in trimmed_mol.GetAtoms()
+                       if get_atom_degree(trimmed_mol, atom.GetIdx()) == 1]
 
-    # List to store the trimmed molecules
-    analogs = []
+    def trim_extremity(trimmed_mol, extremity_atoms):
+        # Remove one atom from each extremity atom
+        for atom_idx in extremity_atoms:
+            new_mol = Chem.RWMol(trimmed_mol)
+            new_mol.RemoveAtom(atom_idx)
+            analogs.append(new_mol.GetMol())
 
-    # Trim the molecule until it matches the scaffold
-    while Chem.MolToSmiles(trimmed_mol) != Chem.MolToSmiles(scaffold):
-        # Check if there are no extremity atoms left
-        if not extremity_atoms:
-            break
+    # Trim the molecule once on each extremity
+    trim_extremity(trimmed_mol, extremity_atoms)
 
-        # Remove one atom at a time from the extremities
-        atom_idx = extremity_atoms.pop()
-        trimmed_mol.RemoveAtom(atom_idx)
-
-        # Update the extremity atoms for the trimmed molecule
-        extremity_atoms = set(atom.GetIdx() for atom in trimmed_mol.GetAtoms()
-                              if get_atom_degree(trimmed_mol, atom.GetIdx()) == 1)
-
-        # Convert the RWMol back to a Mol object for storage
-        analogs.append(trimmed_mol.GetMol())
+    # Convert the RWMol back to a Mol object for storage
+    analogs.append(trimmed_mol.GetMol())
 
     # Convert the list of RWMol objects to a set to remove duplicates
     analogs = list(set(analogs))
-
     return analogs
 
 
@@ -69,6 +58,7 @@ def BO_stepup(smiles):
     """Recursively Increases Bond Order Until Maximum Conjugation"""
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
+    analogs = []
 
     # Create a copy of the molecule as an RWMol object
     rw_mol = Chem.RWMol(mol)
@@ -77,9 +67,6 @@ def BO_stepup(smiles):
     c_c_bond_indices = [bond.GetIdx() for bond in rw_mol.GetBonds() if
                         bond.GetBeginAtom().GetAtomicNum() == 6 and bond.GetEndAtom().GetAtomicNum() == 6
                         and bond.GetBondType() == Chem.BondType.SINGLE]
-
-    # List to store the analog molecules
-    analogs = []
 
     def increase_bond_order_recursive(bond_indices, mol_copy):
         # Base case: no more bond indices to process
@@ -110,7 +97,6 @@ def BO_stepup(smiles):
 
     # Convert the list of RWMol objects to a set to remove duplicates
     analogs = list(set(analogs))
-
     return analogs
 
 
@@ -118,6 +104,7 @@ def BO_stepdown(smiles):
     """Recursively Changes Bond Order Until All Bonds Are Single"""
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
+    analogs = []
 
     # Create a copy of the molecule as an RWMol object
     rw_mol = Chem.RWMol(mol)
@@ -125,9 +112,6 @@ def BO_stepdown(smiles):
     # Find indices of carbon-carbon bonds
     c_c_bond_indices = [bond.GetIdx() for bond in rw_mol.GetBonds() if
                         bond.GetBeginAtom().GetAtomicNum() == 6 and bond.GetEndAtom().GetAtomicNum() == 6]
-
-    # List to store the analog molecules
-    analogs = []
 
     def decrease_bond_order_recursive(bond_indices, mol_copy):
         # Base case: no more bond indices to process
@@ -153,7 +137,6 @@ def BO_stepdown(smiles):
 
     # Convert the list of RWMol objects to a set to remove duplicates
     analogs = list(set(analogs))
-
     return analogs
 
 
@@ -161,6 +144,7 @@ def ring_breaker(smiles):
     """Enumerates Rings In Parent And Opens Rings"""
     # Create the molecule from SMILES
     mol = Chem.MolFromSmiles(smiles)
+    analogs = []
 
     # Generate a 2D depiction of the molecule (optional)
     AllChem.Compute2DCoords(mol)
@@ -173,9 +157,6 @@ def ring_breaker(smiles):
 
     # Enumerate all cycles within the molecule
     cycles = Chem.GetSymmSSSR(mol)
-
-    # List to store the analog molecules
-    analogs = []
 
     # Iterate over each cycle and break the bonds
     for cycle in cycles:
@@ -221,7 +202,6 @@ def ring_breaker(smiles):
 
     # Convert the list of RWMol objects to a set to remove duplicates
     analogs = list(set(analogs))
-
     return analogs
 
 
@@ -229,6 +209,7 @@ def ring_maker(smiles):
     """Enumerates Terminal -CH3, Finds Paths Of Length (4, 5) And Forms Rings With sp3 Carbons On Path"""
     # Create the molecule from SMILES
     mol = Chem.MolFromSmiles(smiles)
+    analogs = []
 
     # Find terminal -CH3 atoms
     terminal_CH3_atoms = [atom.GetIdx() for atom in mol.GetAtoms() if
@@ -239,9 +220,6 @@ def ring_maker(smiles):
 
     # Store the modified molecules at each step
     modified_mols = [Chem.RWMol(mol)]
-
-    # Create an empty list to store the output molecules of newly closed structures
-    analogs = []
 
     # Iterate over the number of ring closures
     for num_closures in range(1, len(terminal_CH3_atoms) + 1):
@@ -297,13 +275,11 @@ def ring_maker(smiles):
 
     # Convert the list of RWMol objects to a set to remove duplicates
     analogs = list(set(analogs))
-
-    # Return the list of analogs
     return analogs
 
 
 def nitrogen_scanning(smiles, target_num=7):
-    """Performs Nitrogen Scanning On Parent"""
+    """Performs Nitrogen Scanning On Parent Molecule"""
     mol = Chem.MolFromSmiles(smiles)
     analogs = []
     for atom in mol.GetAtoms():
@@ -318,12 +294,11 @@ def nitrogen_scanning(smiles, target_num=7):
 
     # Convert the list of RWMol objects to a set to remove duplicates
     analogs = list(set(analogs))
-
     return analogs
 
 
-def aromatic_scanning(smiles, atomic_num, n_hs):
-    """Performs Aromatic Scanning With Different Atomic Numbers And Hydrogen Counts"""
+def scanning(smiles, atomic_num, n_hs):
+    """Scans Parent Molecule Aromatic + Aliphatic Carbons"""
     mol = Chem.AddHs(Chem.MolFromSmiles(smiles))
     analogs = []
     for atom in mol.GetAtoms():
@@ -331,56 +306,57 @@ def aromatic_scanning(smiles, atomic_num, n_hs):
             n = atom.GetNeighbors()
             assert len(n) == 1
             n = n[0]
-            if n.GetSymbol() == 'C' and n.GetIsAromatic():
-                analog = Chem.RWMol(mol)
-                a = analog.GetAtomWithIdx(atom.GetIdx())
-                a.SetAtomicNum(atomic_num)
-                a.SetNumExplicitHs(n_hs)
-                Chem.SanitizeMol(analog)
-                analogs.append(analog)
+            analog = Chem.RWMol(mol)
+            a = analog.GetAtomWithIdx(atom.GetIdx())
+            a.SetAtomicNum(atomic_num)
+            a.SetNumExplicitHs(n_hs)
+            Chem.SanitizeMol(analog)
+            analogs.append(analog)
 
     # Convert the list of RWMol objects to a set to remove duplicates
     analogs = list(set(analogs))
-
     return analogs
 
 
 # Functions to perform specific scanning methods
 def methyl_scanning(smiles):
-    return aromatic_scanning(smiles, 6, 3)
+    return scanning(smiles, 6, 3)
 
 
 def amine_scanning(smiles):
-    return aromatic_scanning(smiles, 7, 2)
+    return scanning(smiles, 7, 2)
 
 
 def hydroxyl_scanning(smiles):
-    return aromatic_scanning(smiles, 8, 1)
+    return scanning(smiles, 8, 1)
 
 
 def fluorine_scanning(smiles):
-    return aromatic_scanning(smiles, 9, 0)
+    return scanning(smiles, 9, 0)
 
 
 def main():
     # Define the analogue methods and their corresponding names
     analogue_methods = [
-        # [trim_to_bemis_murcko_scaffold, "trim-to-BM-scaffold"],
-        # [BO_stepup, "increase-bond-order"],
-        # [BO_stepdown, "decrease-bond-order"],
-        # [ring_breaker, "ring-opening"],
-        # [ring_maker, "ring-closure"],
-        # [nitrogen_scanning, "n-scan"],
-        # [methyl_scanning, "ch3-scan"],
-        # [amine_scanning, "nh2-scan"],
-        # [hydroxyl_scanning, "oh-scan"],
+        [trim_extremities, "trim"],
+        [BO_stepup, "increase-bond-order"],
+        [BO_stepdown, "decrease-bond-order"],
+        [ring_breaker, "ring-opening"],
+        [ring_maker, "ring-closure"],
+        [nitrogen_scanning, "n-scan"],
+        [methyl_scanning, "ch3-scan"],
+        [amine_scanning, "nh2-scan"],
+        [hydroxyl_scanning, "oh-scan"],
         [fluorine_scanning, "f-scan"]
     ]
 
     # Specify the input and output file names
     path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/'
     smiles_input_filename = 'smi-zn-ampc-all.smi'
-    output_file_prefix = "trimmer"
+    output_file_prefix = "total_benchmark"
+
+    # Define the list of parent SMILES to take pictures of
+    take_picture = [""]  # Add your desired parent SMILES here
 
     # Read the input file and store the smiles and zinc IDs in a DataFrame
     smiles_zinc_input = pd.read_csv(f'{path}{smiles_input_filename}', sep=' ', header=None, names=['Smiles', 'ZincID'])
@@ -425,49 +401,6 @@ def main():
         for line in lines_out:
             f2.write(line + "\n")
 
-    # Define the list of parent SMILES to take pictures of
-    take_picture = ["O=c1[nH]ccn1-c1ccc(NS(=O)(=O)c2cc(Cl)cc(Cl)c2O)cc1"]  # Add your desired parent SMILES here
-    # Generate and save the grid image for each parent SMILES in take_picture
-    for analogue_line in analogue_key:
-        parent_smiles = analogue_line[0][0]
-        if parent_smiles in take_picture:
-            for analogue_method in analogue_line[1]:
-                method = analogue_method[0]
-                analogue_data = analogue_method[1]
-
-                # Create a list to store analogue images
-                analogue_images = []
-
-                # Loop through the analogues and add them to the list
-                for analogue in analogue_data:
-                    analogue_smiles = analogue[0]
-                    fakezinc = analogue[1]
-                    mol = Chem.MolFromSmiles(analogue_smiles)
-                    img = Draw.MolToImage(mol, size=(500, 500))
-                    analogue_images.append(img)
-
-                # Determine the dimensions of the grid
-                num_analogues = len(analogue_images)
-                num_rows = min(10, int(math.ceil(num_analogues / 10)))
-                num_cols = min(10, num_analogues)
-
-                # Create the grid image
-                grid_image = Image.new('RGB', (num_cols * 500, num_rows * 500))
-
-                # Loop through the analogues and paste them into the grid
-                for i, analogue_image in enumerate(analogue_images):
-                    col_idx = i % 10
-                    row_idx = i // 10
-                    grid_image.paste(analogue_image, (col_idx * 500, row_idx * 500))
-
-                # Add the parent SMILES and method label to the top of the image
-                draw = ImageDraw.Draw(grid_image)
-                label = f"Parent SMILES: {parent_smiles}\nMethod: {method}"
-                draw.text((10, 10), label, fill="white")
-
-                # Save the grid image as a PNG file
-                grid_image.save(f"{path}{output_file_prefix}-{parent_smiles}-{method}.png")
-
     # Write the key specifying which molecules are analogues of which other molecules and by which analoging processes
     key_file = f"{path}{output_file_prefix}-key-i{len(smiles_zinc_input)}-o{len(lines_out)}"
     with open(key_file, "wb") as fp:
@@ -481,6 +414,49 @@ def main():
     # Calculate molecules generated per second
     benchmark = float(len(lines_out)) / elapsed_time
     print(f"Benchmark: {benchmark} molecules/second")
+
+    # Check if the "take_picture" list is not empty
+    if take_picture:
+        # Generate and save the grid image for each parent SMILES in take_picture
+        for analogue_line in analogue_key:
+            parent_smiles = analogue_line[0][0]
+            if parent_smiles in take_picture:
+                for analogue_method in analogue_line[1]:
+                    method = analogue_method[0]
+                    analogue_data = analogue_method[1]
+
+                    # Create a list to store analogue images
+                    analogue_images = []
+
+                    # Loop through the analogues and add them to the list
+                    for analogue in analogue_data:
+                        analogue_smiles = analogue[0]
+                        fakezinc = analogue[1]
+                        mol = Chem.MolFromSmiles(analogue_smiles)
+                        img = Draw.MolToImage(mol, size=(500, 500))
+                        analogue_images.append(img)
+
+                    # Determine the dimensions of the grid
+                    num_analogues = len(analogue_images)
+                    num_rows = min(10, int(math.ceil(num_analogues / 10)))
+                    num_cols = min(10, num_analogues)
+
+                    # Create the grid image
+                    grid_image = Image.new('RGB', (num_cols * 500, num_rows * 500))
+
+                    # Loop through the analogues and paste them into the grid
+                    for i, analogue_image in enumerate(analogue_images):
+                        col_idx = i % 10
+                        row_idx = i // 10
+                        grid_image.paste(analogue_image, (col_idx * 500, row_idx * 500))
+
+                    # Add the parent SMILES and method label to the top of the image
+                    draw = ImageDraw.Draw(grid_image)
+                    label = f"Parent SMILES: {parent_smiles}\nMethod: {method}"
+                    draw.text((10, 10), label, fill="white")
+
+                    # Save the grid image as a PNG file
+                    grid_image.save(f"{path}{output_file_prefix}-{parent_smiles}-{method}.png")
 
 
 if __name__ == '__main__':
