@@ -1,3 +1,4 @@
+# Jonathan Borowsky and Nathan Levinzon, UCSF 2023
 import sys
 import glob
 
