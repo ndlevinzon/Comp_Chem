@@ -9,8 +9,8 @@ import math
 import sys
 
 #from /nfs/home/jborowsky/rotation/css-1/
-import extract_best_smiles
-import analog_generator_061623
+import Extract_Best_Smiles
+import Analog_Generator
 
 #---------------------------parameters--------------------------
 
