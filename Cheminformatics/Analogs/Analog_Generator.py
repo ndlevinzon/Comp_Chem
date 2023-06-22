@@ -9,11 +9,14 @@ from collections import deque
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw
 from rdkit.Chem.rdchem import HybridizationType, BondType
-
+from rdkit.Chem.EnumerateHeterocycles import EnumerateHeterocycles
 
 # Get the current time before running the code
 start_time = time.time()
 print(f"Starting Time: {start_time}")
+
+
+# --------------------------Extremity Trimmer-------------------------- #
 
 
 def trim_extremities(smiles):
@@ -22,8 +25,11 @@ def trim_extremities(smiles):
     mol = Chem.MolFromSmiles(smiles)
     analogs = []
 
+    # Adjust valence of the molecule
+    Chem.SanitizeMol(mol, sanitizeOps=Chem.SanitizeFlags.SANITIZE_ADJUSTHS)
+
     # Create a copy of the molecule to trim
-    trimmed_mol = Chem.RWMol(mol)
+    rw_mol = Chem.RWMol(mol)
 
     def get_atom_degree(mol, atom_idx):
         # Count the number of neighboring bonds for the atom
@@ -34,8 +40,7 @@ def trim_extremities(smiles):
         return degree
 
     # Get the atom indices for extremities
-    extremity_atoms = [atom.GetIdx() for atom in trimmed_mol.GetAtoms()
-                       if get_atom_degree(trimmed_mol, atom.GetIdx()) == 1]
+    extremity_atoms = [atom.GetIdx() for atom in mol.GetAtoms() if get_atom_degree(mol, atom.GetIdx()) == 1]
 
     def trim_extremity(trimmed_mol, extremity_atoms):
         # Remove one atom from each extremity atom
@@ -45,21 +50,22 @@ def trim_extremities(smiles):
             analogs.append(new_mol.GetMol())
 
     # Trim the molecule once on each extremity
-    trim_extremity(trimmed_mol, extremity_atoms)
+    trim_extremity(rw_mol, extremity_atoms)
 
-    # Convert the RWMol back to a Mol object for storage
-    analogs.append(trimmed_mol.GetMol())
-
-    # Convert the list of RWMol objects to a set to remove duplicates
-    analogs = list(set(analogs))
+    # Remove duplicates and the initial SMILES from the analogs list
+    analogs = [mol for mol in analogs if mol != mol and Chem.MolToSmiles(mol) != smiles]
     return analogs
 
+# --------------------------Bond Order Changes-------------------------- #
 
 def BO_stepup(smiles):
     """Recursively Increases Bond Order Until Maximum Conjugation"""
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
     analogs = []
+
+    # Adjust valence of the molecule
+    Chem.SanitizeMol(mol, sanitizeOps=Chem.SanitizeFlags.SANITIZE_ADJUSTHS)
 
     # Create a copy of the molecule as an RWMol object
     rw_mol = Chem.RWMol(mol)
@@ -81,23 +87,31 @@ def BO_stepup(smiles):
 
         mol_copy_new = Chem.RWMol(mol_copy)
 
-        if bond.GetBondType() == Chem.BondType.SINGLE:
-            # Increase bond order from single to double
-            mol_copy_new.GetBondWithIdx(bond_idx).SetBondType(Chem.BondType.DOUBLE)
-            increase_bond_order_recursive(bond_indices[1:], mol_copy_new)
-        elif bond.GetBondType() == Chem.BondType.DOUBLE:
-            # Increase bond order from double to triple
-            mol_copy_new.GetBondWithIdx(bond_idx).SetBondType(Chem.BondType.TRIPLE)
-            increase_bond_order_recursive(bond_indices[1:], mol_copy_new)
+        n_neighbors1 = len([n for n in bond.GetBeginAtom().GetNeighbors()])
+        n_neighbors2 = len([n for n in bond.GetEndAtom().GetNeighbors()])
 
-        # Process the next bond index without changing the current molecule copy
+        if bond.GetBondType() == Chem.BondType.SINGLE and n_neighbors1 < 3 and n_neighbors2 < 3:
+            # Increase bond order from single to double
+            try:
+                mol_copy_new.GetBondWithIdx(bond_idx).SetBondType(Chem.BondType.DOUBLE)
+                analogs.append(Chem.RWMol(mol_copy_new))
+            except:
+                print("Error: Could not make Double Bond")
+        elif bond.GetBondType() == Chem.BondType.DOUBLE and n_neighbors1 < 2 and n_neighbors2 < 2:
+            # Increase bond order from double to triple
+            try:
+                mol_copy_new.GetBondWithIdx(bond_idx).SetBondType(Chem.BondType.TRIPLE)
+                analogs.append(Chem.RWMol(mol_copy_new))
+            except:
+                print("Error: Could not make Triple Bond")
+
         increase_bond_order_recursive(bond_indices[1:], Chem.RWMol(mol_copy))
 
     # Start the recursive function to increase bond order
     increase_bond_order_recursive(c_c_bond_indices, rw_mol)
 
-    # Convert the list of RWMol objects to a set to remove duplicates
-    analogs = list(set(analogs))
+    # Remove duplicates and the initial SMILES from the analogs list
+    analogs = [mol for mol in analogs if mol != mol and Chem.MolToSmiles(mol) != smiles]
     return analogs
 
 
@@ -106,6 +120,9 @@ def BO_stepdown(smiles):
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
     analogs = []
+
+    # Adjust valence of the molecule
+    Chem.SanitizeMol(mol, sanitizeOps=Chem.SanitizeFlags.SANITIZE_ADJUSTHS)
 
     # Create a copy of the molecule as an RWMol object
     rw_mol = Chem.RWMol(mol)
@@ -117,6 +134,8 @@ def BO_stepdown(smiles):
     def decrease_bond_order_recursive(bond_indices, mol_copy):
         # Base case: no more bond indices to process
         if not bond_indices:
+            # Sanitize the molecule to adjust the valence and bonding pattern
+            Chem.SanitizeMol(rw_mol)
             analogs.append(Chem.RWMol(mol_copy))
             return
 
@@ -136,22 +155,17 @@ def BO_stepdown(smiles):
     # Start the recursive function to decrease bond order
     decrease_bond_order_recursive(c_c_bond_indices, rw_mol)
 
-    # Convert the list of RWMol objects to a set to remove duplicates
-    analogs = list(set(analogs))
+    # Remove duplicates and the initial SMILES from the analogs list
+    analogs = [mol for mol in analogs if mol != mol and Chem.MolToSmiles(mol) != smiles]
     return analogs
 
+# --------------------------Ring Changes-------------------------- #
 
 def ring_breaker(smiles):
     """Enumerates Rings In Parent And Opens Rings"""
     # Create the molecule from SMILES
     mol = Chem.MolFromSmiles(smiles)
     analogs = []
-
-    # Generate a 2D depiction of the molecule (optional)
-    AllChem.Compute2DCoords(mol)
-
-    # Adjust valence of the molecule
-    Chem.SanitizeMol(mol, sanitizeOps=Chem.SanitizeFlags.SANITIZE_ADJUSTHS)
 
     # Disable kekulization
     Chem.Kekulize(mol, clearAromaticFlags=True)
@@ -170,39 +184,41 @@ def ring_breaker(smiles):
 
             # Remove the bond between atom1 and atom2
             bond = mol_copy.GetBondBetweenAtoms(atom1, atom2)
-            mol_copy.RemoveBond(atom1, atom2)
+            if bond is not None:
+                mol_copy.RemoveBond(atom1, atom2)
 
-            # Add new atoms and bonds based on modified adjacency matrix
-            adjacency_matrix = Chem.GetAdjacencyMatrix(mol_copy)
-            for j in range(len(adjacency_matrix)):
-                for k in range(j + 1, len(adjacency_matrix)):
-                    if adjacency_matrix[j][k] and not mol_copy.GetBondBetweenAtoms(j, k):
-                        mol_copy.AddBond(j, k, Chem.BondType.SINGLE)
+                # Add new atoms and bonds based on modified adjacency matrix
+                adjacency_matrix = Chem.GetAdjacencyMatrix(mol_copy)
+                for j in range(len(adjacency_matrix)):
+                    for k in range(j + 1, len(adjacency_matrix)):
+                        if adjacency_matrix[j][k] and not mol_copy.GetBondBetweenAtoms(j, k):
+                            mol_copy.AddBond(j, k, Chem.BondType.SINGLE)
 
-            # Update the molecule properties and sanitize
-            mol_copy.UpdatePropertyCache(strict=False)
-            try:
-                Chem.SanitizeMol(mol_copy, sanitizeOps=Chem.SanitizeFlags.SANITIZE_ADJUSTHS)
-                Chem.Kekulize(mol_copy)
+                # Update the molecule properties and sanitize
+                mol_copy.UpdatePropertyCache(strict=False)
+                try:
+                    Chem.SanitizeMol(mol_copy,
+                                     sanitizeOps=Chem.SanitizeFlags.SANITIZE_ALL ^ Chem.SanitizeFlags.SANITIZE_PROPERTIES)
+                    Chem.Kekulize(mol_copy)
 
-                # Process sanitized analogs
-                sanitized_analogs = []
-                sanitized_analogs.append(mol_copy)
-                for analog in sanitized_analogs:
-                    Chem.GetSymmSSSR(analog)
-                    smiles = Chem.MolToSmiles(analog, isomericSmiles=True)
-                    smiles = re.sub(r'\(\)', '', smiles)  # Remove empty parentheses
-                    smiles = re.sub(r'\[.*?\]', '', smiles)  # Remove brackets denoting bond breakages
-                    if smiles.startswith('*'):  # Check if SMILES starts with *
-                        smiles = smiles[1:]  # Remove the asterisk character from the beginning
-                    sanitized_analog = Chem.MolFromSmiles(smiles)
-                    if sanitized_analog is not None:
-                        analogs.append(sanitized_analog)
-            except:
-                pass
+                    # Process sanitized analogs
+                    sanitized_analogs = [mol_copy]
+                    for analog in sanitized_analogs:
+                        Chem.GetSymmSSSR(analog)
+                        smiles = Chem.MolToSmiles(analog, isomericSmiles=True)
+                        smiles = re.sub(r'\(\)', '', smiles)  # Remove empty parentheses
+                        smiles = re.sub(r'\[.*?\]', '', smiles)  # Remove brackets denoting bond breakages
+                        if smiles.startswith('*'):  # Check if SMILES starts with *
+                            smiles = smiles[1:]  # Remove the asterisk character from the beginning
+                        sanitized_analog = Chem.MolFromSmiles(smiles)
+                        if sanitized_analog is not None:
+                            analogs.append(sanitized_analog)
+                except Chem.AtomValenceException:
+                    # Skip if valence adjustment fails during sanitization
+                    continue
 
-    # Convert the list of RWMol objects to a set to remove duplicates
-    analogs = list(set(analogs))
+    # Remove duplicates and the initial SMILES from the analogs list
+    analogs = [mol for mol in analogs if Chem.MolToSmiles(mol) != smiles]
     return analogs
 
 
@@ -211,6 +227,9 @@ def ring_maker(smiles):
     # Create the molecule from SMILES
     mol = Chem.MolFromSmiles(smiles)
     analogs = []
+
+    # Adjust valence of the molecule
+    Chem.SanitizeMol(mol, sanitizeOps=Chem.SanitizeFlags.SANITIZE_ADJUSTHS)
 
     # Find terminal -CH3 atoms
     terminal_CH3_atoms = [atom.GetIdx() for atom in mol.GetAtoms() if
@@ -245,6 +264,9 @@ def ring_maker(smiles):
                 if curr_path_length in path_lengths and curr_atom_idx != atom_idx:
                     end_atom = curr_mol.GetAtomWithIdx(curr_atom_idx)
                     if end_atom.GetHybridization() == HybridizationType.SP3:
+                        # print(f"Path length: {curr_path_length},
+                        # Final atom: {end_atom.GetSymbol()},
+                        # Hybridization: SP3")
 
                         # Create a new bond between the initial and final atom
                         curr_mol.AddBond(atom_idx, curr_atom_idx, BondType.SINGLE)
@@ -271,13 +293,14 @@ def ring_maker(smiles):
         # Store the modified molecule for the current step
         modified_mols.append(curr_mol.GetMol())
 
-    # Convert the list of RWMol objects to a set to remove duplicates
-    analogs = list(set(analogs))
+    # Remove duplicates and the initial SMILES from the analogs list
+    analogs = [mol for mol in analogs if Chem.MolToSmiles(mol) != smiles]
     return analogs
 
+# --------------------------Atom Walks-------------------------- #
 
-def nitrogen_scanning(smiles, target_num=7):
-    """Performs Nitrogen Scanning On Parent Molecule"""
+def walks(smiles, target_num):
+    """Performs Nitrogen Walks On Parent Molecule"""
     mol = Chem.MolFromSmiles(smiles)
     analogs = []
     for atom in mol.GetAtoms():
@@ -287,13 +310,35 @@ def nitrogen_scanning(smiles, target_num=7):
             a_neighbors = [n for n in a.GetNeighbors()]
             if len(a_neighbors) == 2:
                 a.SetAtomicNum(target_num)
-                Chem.SanitizeMol(analog)
+                # Chem.SanitizeMol(analog)
                 analogs.append(analog)
 
-    # Convert the list of RWMol objects to a set to remove duplicates
-    analogs = list(set(analogs))
+    # Remove duplicates and the initial SMILES from the analogs list
+    analogs = [mol for mol in analogs if Chem.MolToSmiles(mol) != smiles]
     return analogs
 
+
+# Functions to perform specific walking methods
+def nitrogen_walks(smiles): return walks(smiles, target_num=7)
+def oxygen_walks(smiles): return walks(smiles, target_num=8)
+def sulfur_walks(smiles): return walks(smiles, target_num=16)
+
+
+def heterocycle_walks(smiles):
+    """Performs Heterocycle Walks On Parent Molecule"""
+    mol = Chem.MolFromSmiles(smiles)
+    analogs = []
+
+    # Enumerate heterocycles and append RWMol objects to analogs list
+    for mol in EnumerateHeterocycles(mol, depth=1):
+        analog = Chem.RWMol(mol)
+        analogs.append(analog)
+
+    # Remove duplicates and the initial SMILES from the analogs list
+    analogs = [mol for mol in analogs if Chem.MolToSmiles(mol) != smiles]
+    return analogs
+
+# --------------------------Atom Scans-------------------------- #
 
 def scanning(smiles, atomic_num, n_hs):
     """Scans Parent Molecule Aromatic + Aliphatic Carbons"""
@@ -311,8 +356,8 @@ def scanning(smiles, atomic_num, n_hs):
             Chem.SanitizeMol(analog)
             analogs.append(analog)
 
-    # Convert the list of RWMol objects to a set to remove duplicates
-    analogs = list(set(analogs))
+    # Remove duplicates and the initial SMILES from the analogs list
+    analogs = [mol for mol in analogs if Chem.MolToSmiles(mol) != smiles]
     return analogs
 
 
@@ -320,8 +365,28 @@ def scanning(smiles, atomic_num, n_hs):
 def methyl_scanning(smiles): return scanning(smiles, 6, 3)
 def amine_scanning(smiles): return scanning(smiles, 7, 2)
 def hydroxyl_scanning(smiles): return scanning(smiles, 8, 1)
+def thiol_scanning(smiles): return scanning(smiles, 16, 1)
 def fluorine_scanning(smiles): return scanning(smiles, 9, 0)
+def chlorine_scanning(smiles): return scanning(smiles, 17, 0)
+def bromine_scanning(smiles): return scanning(smiles, 35, 0)
 
+# --------------------------Atom Neutralization-------------------------- #
+
+def neutralize_atoms(mol):
+    pattern = Chem.MolFromSmarts("[+1!h0!$([*]~[-1,-2,-3,-4]),-1!$([*]~[+1,+2,+3,+4])]")
+    at_matches = mol.GetSubstructMatches(pattern)
+    at_matches_list = [y[0] for y in at_matches]
+    if len(at_matches_list) > 0:
+        for at_idx in at_matches_list:
+            atom = mol.GetAtomWithIdx(at_idx)
+            chg = atom.GetFormalCharge()
+            hcount = atom.GetTotalNumHs()
+            atom.SetFormalCharge(0)
+            atom.SetNumExplicitHs(hcount - chg)
+            atom.UpdatePropertyCache()
+    return mol
+
+# --------------------------Switchboard--------------------------#
 
 def main():
     # Define the analogue methods and their corresponding names
@@ -331,11 +396,17 @@ def main():
         [BO_stepdown, "decrease-bond-order"],
         [ring_breaker, "ring-opening"],
         [ring_maker, "ring-closure"],
-        [nitrogen_scanning, "n-scan"],
+        [nitrogen_walks, "n-walk"],
+        [oxygen_walks, "o-walk"],
+        [sulfur_walks, "s-walk"],
+        [heterocycle_walks, "heterocycle-walk"],
         [methyl_scanning, "ch3-scan"],
         [amine_scanning, "nh2-scan"],
         [hydroxyl_scanning, "oh-scan"],
-        [fluorine_scanning, "f-scan"]
+        [thiol_scanning, "sh-scan"],
+        [fluorine_scanning, "f-scan"],
+        [chlorine_scanning, "cl-scan"],
+        [bromine_scanning, "br-scan"],
     ]
 
     # Specify the input and output file names
@@ -349,7 +420,7 @@ def main():
     # Read the input file and store the smiles and zinc IDs in a DataFrame
     smiles_zinc_input = pd.read_csv(f'{path}{smiles_input_filename}', sep=' ', header=None, names=['Smiles', 'ZincID'])
 
-    analogue_key = []
+    analog_key = []
     lines_out = []
     analog_count = 0
 
@@ -367,21 +438,21 @@ def main():
             analogue_key_scan = [method[1], []]
 
             # Generate analogues using the specified method
-            for analogue in method[0](smiles):
-                analogue_smiles = Chem.MolToSmiles(analogue, isomericSmiles=True)
+            for analog in method[0](smiles):
+                analog_smiles = Chem.MolToSmiles(neutralize_atoms(analog), isomericSmiles=True)
 
-                if analogue_smiles not in all_analogues:
+                if analog_smiles not in all_analogues:
                     fakezinc = "fakezinc" + str(analog_count).zfill(8)
-                    lines_out.append(f"{analogue_smiles} {fakezinc}")
-                    analogue_key_scan[1].append([analogue_smiles, fakezinc])
-                    all_analogues.append(analogue_smiles)
+                    lines_out.append(f"{analog_smiles} {fakezinc}")
+                    analogue_key_scan[1].append([analog_smiles, fakezinc])
+                    all_analogues.append(analog_smiles)
                     analog_count += 1
                 else:
-                    print(analogue_smiles)
+                    print(analog_smiles)
 
             analogue_key_line[1].append(analogue_key_scan)
 
-        analogue_key.append(analogue_key_line)
+        analog_key.append(analogue_key_line)
 
     # Write the generated smiles and fake zincs to a file
     output_file = f"{path}{output_file_prefix}-analogues-i{len(smiles_zinc_input)}-o{len(lines_out)}.smi"
@@ -392,7 +463,10 @@ def main():
     # Write the key specifying which molecules are analogues of which other molecules and by which analoging processes
     key_file = f"{path}{output_file_prefix}-key-i{len(smiles_zinc_input)}-o{len(lines_out)}"
     with open(key_file, "wb") as fp:
-        pickle.dump(analogue_key, fp)
+        pickle.dump(analog_key, fp)
+
+    # Calculate the number of analogs generated
+    print(f"Molecules: {len(lines_out)} molecules")
 
     # Calculate the elapsed time
     end_time = time.time()
@@ -406,7 +480,7 @@ def main():
     # Check if the "take_picture" list is not empty
     if take_picture:
         # Generate and save the grid image for each parent SMILES in take_picture
-        for analogue_line in analogue_key:
+        for analogue_line in analog_key:
             parent_smiles = analogue_line[0][0]
             if parent_smiles in take_picture:
                 for analogue_method in analogue_line[1]:
