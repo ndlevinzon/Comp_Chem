@@ -245,9 +245,6 @@ def ring_maker(smiles):
                 if curr_path_length in path_lengths and curr_atom_idx != atom_idx:
                     end_atom = curr_mol.GetAtomWithIdx(curr_atom_idx)
                     if end_atom.GetHybridization() == HybridizationType.SP3:
-                        # print(f"Path length: {curr_path_length},
-                        # Final atom: {end_atom.GetSymbol()},
-                        # Hybridization: SP3")
 
                         # Create a new bond between the initial and final atom
                         curr_mol.AddBond(atom_idx, curr_atom_idx, BondType.SINGLE)
@@ -320,20 +317,10 @@ def scanning(smiles, atomic_num, n_hs):
 
 
 # Functions to perform specific scanning methods
-def methyl_scanning(smiles):
-    return scanning(smiles, 6, 3)
-
-
-def amine_scanning(smiles):
-    return scanning(smiles, 7, 2)
-
-
-def hydroxyl_scanning(smiles):
-    return scanning(smiles, 8, 1)
-
-
-def fluorine_scanning(smiles):
-    return scanning(smiles, 9, 0)
+def methyl_scanning(smiles): return scanning(smiles, 6, 3)
+def amine_scanning(smiles): return scanning(smiles, 7, 2)
+def hydroxyl_scanning(smiles): return scanning(smiles, 8, 1)
+def fluorine_scanning(smiles): return scanning(smiles, 9, 0)
 
 
 def main():
