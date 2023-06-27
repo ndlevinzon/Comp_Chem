@@ -114,7 +114,6 @@ def BO_stepup(smiles):
     analogs = [mol for mol in analogs if mol != mol and Chem.MolToSmiles(mol) != smiles]
     return analogs
 
-
 def BO_stepdown(smiles):
     """Decreases Bond Order of Non-Single Bonds"""
 
@@ -152,9 +151,11 @@ def BO_stepdown(smiles):
     bond_indices = [i for i, symbol in enumerate(explicit_smiles) if symbol in ("#", "=")]
     analogs_smiles = decrease_bond_order_recursive(explicit_smiles, bond_indices)
     # Remove duplicates and the initial SMILES from the analogs list
-    analogs_smiles = [mol for mol in analogs_smiles if mol != smiles]
+    analogs_smiles = list(set(analogs_smiles) - {smiles})
     analogs = [Chem.MolFromSmiles(smiles) for smiles in analogs_smiles]
+
     return analogs
+
 # --------------------------Ring Changes-------------------------- #
 
 def ring_breaker(smiles):
@@ -336,46 +337,88 @@ def sulfur_walks(smiles): return walks(smiles, target_num=16)
 
 # --------------------------Atom Scans-------------------------- #
 
-def scanning(smiles, atomic_num, n_hs):
-    """Scans Parent Molecule Aromatic + Aliphatic Carbons"""
-    mol = Chem.AddHs(Chem.MolFromSmiles(smiles))
-    aromatic_atoms = [atom.GetIdx() for atom in mol.GetAtoms() if atom.GetIsAromatic()]
-    analogs = []
+def scanning(smiles, fragments):
+    mol = Chem.MolFromSmiles(smiles)
+    mol = Chem.AddHs(mol)
 
-    for atom in mol.GetAtoms():
-        if atom.GetSymbol() == 'H':
-            n = atom.GetNeighbors()
-            assert len(n) == 1
-            n = n[0]
-            analog = Chem.RWMol(mol)
-            a = analog.GetAtomWithIdx(atom.GetIdx())
-            a.SetAtomicNum(atomic_num)
-            a.SetNumExplicitHs(n_hs)
-            Chem.SanitizeMol(analog)
-            analogs.append(analog)
+    analogs = set()  # Use a set to store unique analogs
 
-            if atom.GetIsAromatic() and atomic_num == 6:
-                aromatic_atoms_copy = aromatic_atoms.copy()
-                aromatic_atoms_copy.remove(atom.GetIdx())  # Remove the current atom index from the list
-                for position in aromatic_atoms_copy:
-                    a = analog.GetAtomWithIdx(position)
-                    a.SetAtomicNum(atomic_num)
-                    a.SetNumExplicitHs(n_hs)
+    for hydrogen in mol.GetAtoms():
+        if hydrogen.GetSymbol() == 'H':
+            parent = Chem.RWMol(mol)
+            hydrogen_idx = hydrogen.GetIdx()
+
+            # Find the carbon atom connected to the hydrogen
+            carbon = None
+            for neighbor in hydrogen.GetNeighbors():
+                if neighbor.GetSymbol() == 'C':
+                    carbon = neighbor
+                    break
+
+            if carbon is None:
+                continue
+
+            for fragment in fragments:
+                analog = Chem.RWMol(parent)
+
+                # Replace the hydrogen with the fragment
+                analog.RemoveAtom(hydrogen_idx)
+                fragment_mol = Chem.MolFromSmiles(fragment)
+
+                if fragment_mol is not None:
+                    atom_map = {}  # Map atom indices from the fragment to the analog
+                    for atom in fragment_mol.GetAtoms():
+                        new_atom_idx = analog.AddAtom(atom)
+                        atom_map[atom.GetIdx()] = new_atom_idx
+                    for bond in fragment_mol.GetBonds():
+                        analog.AddBond(atom_map[bond.GetBeginAtomIdx()], atom_map[bond.GetEndAtomIdx()], bond.GetBondType())
+
+                    # Add the bond between the carbon and the fragment
+                    analog.AddBond(carbon.GetIdx(), atom_map[0], Chem.BondType.SINGLE)
+
+                # Sanitize the generated analog molecule
+                try:
                     Chem.SanitizeMol(analog)
-                    analogs.append(analog)
+                    analog_smiles = Chem.MolToSmiles(analog, isomericSmiles=True)
+                    if '.' not in analog_smiles:
+                        analogs.add(analog_smiles)
+                except (Chem.MolSanitizeException, Chem.KekulizeException) as e:
+                    print("Molecule sanitization failed:", str(e))
+                    continue
 
-    # Remove duplicates and the initial SMILES from the analogs list
-    analogs = [mol for mol in analogs if Chem.MolToSmiles(mol) != smiles]
-    return analogs
+    return [Chem.MolFromSmiles(analog_smiles) for analog_smiles in analogs]
 
 # Functions to perform specific scanning methods
-def methyl_scanning(smiles): return scanning(smiles, 6, 3)
-def amine_scanning(smiles): return scanning(smiles, 7, 2)
-def hydroxyl_scanning(smiles): return scanning(smiles, 8, 1)
-def thiol_scanning(smiles): return scanning(smiles, 16, 1)
-def fluorine_scanning(smiles): return scanning(smiles, 9, 0)
-def chlorine_scanning(smiles): return scanning(smiles, 17, 0)
-def bromine_scanning(smiles): return scanning(smiles, 35, 0)
+def methyl_scanning(smiles): return scanning(smiles, ['C'])
+def amine_scanning(smiles): return scanning(smiles, ['N'])
+def hydroxyl_scanning(smiles): return scanning(smiles, ['O'])
+def thiol_scanning(smiles): return scanning(smiles, ['S'])
+def fluorine_scanning(smiles): return scanning(smiles, ['F'])
+def chlorine_scanning(smiles): return scanning(smiles, ['Cl'])
+def bromine_scanning(smiles): return scanning(smiles, ['Br'])
+
+def bioisosters_scanning(smiles):
+    fragments = [
+        'C(=O)O',  # Carboxylic acid
+        'C(=O)N',  # Amide
+        'C(=O)N(=O)=O',  # Nitro group
+        'CN',  # Cyanide
+        'C(=O)Cl',  # Acid chloride
+        'C(=O)F',  # Fluoride
+        '[C](F)(F)F', # Trifluoro
+        'C(=O)Br',  # Bromide
+        'C(=O)I',  # Iodide
+        'C(=S)N',  # Thioamide
+        'C(=O)S',  # Thioester
+        'C(=N)N',  # Azide
+        'C(=O)N(=O)N',  # Nitramide
+        'C(=O)OCC',  # Ester
+        'C(=O)OC',  # Ether
+        'C(=O)NCC',  # Carbamate
+        'C(=O)OCC(=O)O'  # Anhydride
+    ]
+    return scanning(smiles, fragments)
+
 
 # --------------------------Atom Neutralization-------------------------- #
 
@@ -398,28 +441,29 @@ def neutralize_atoms(mol):
 def main():
     # Define the analogue methods and their corresponding names
     analog_methods = [
-        # [trim_extremities, "trim"],
-        # [BO_stepup, "increase-bond-order"],
+        [trim_extremities, "trim"],
+        [BO_stepup, "increase-bond-order"],
         [BO_stepdown, "decrease-bond-order"],
-        # [ring_breaker, "ring-opening"],
-        # [ring_maker, "ring-closure"],
+        [ring_breaker, "ring-opening"],
+        [ring_maker, "ring-closure"],
         [nitrogen_walks, "n-walk"],
         [oxygen_walks, "o-walk"],
         [sulfur_walks, "s-walk"],
-        # [heterocycle_walks, "heterocycle-walk"],
-        # [methyl_scanning, "ch3-scan"],
-        # [amine_scanning, "nh2-scan"],
-        # [hydroxyl_scanning, "oh-scan"],
-        # [thiol_scanning, "sh-scan"],
-        # [fluorine_scanning, "f-scan"],
-        # [chlorine_scanning, "cl-scan"],
-        # [bromine_scanning, "br-scan"],
+        [heterocycle_walks, "heterocycle-walk"],
+        [methyl_scanning, "ch3-scan"],
+        [amine_scanning, "nh2-scan"],
+        [hydroxyl_scanning, "oh-scan"],
+        [thiol_scanning, "sh-scan"],
+        [fluorine_scanning, "f-scan"],
+        [chlorine_scanning, "cl-scan"],
+        [bromine_scanning, "br-scan"],
+        [bioisosters_scanning, "bioisoster-scan"],
     ]
 
     # Specify the input and output file names
     path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/'
-    smiles_input_filename = 'rings.smi'
-    output_file_prefix = "phenol_walks_test"
+    smiles_input_filename = 'smi-zn-ampc-all.smi'
+    output_file_prefix = "phenol_NEW_total"
 
     # Define the list of parent SMILES to take pictures of
     take_picture = []  # Add your desired parent SMILES here
@@ -447,6 +491,7 @@ def main():
             # Generate analogues using the specified method
             for analog in method[0](smiles):
                 analog_smiles = Chem.MolToSmiles(analog)
+                print(analog_smiles)
 
                 if analog_smiles not in all_analogs:
                     fakezinc = "fakezinc" + str(analog_count).zfill(8)
@@ -455,7 +500,7 @@ def main():
                     all_analogs.append(analog_smiles)
                     analog_count += 1
                 else:
-                    print(analog_smiles)
+                    continue
 
             analog_key_line[1].append(analog_key_scan)
 
