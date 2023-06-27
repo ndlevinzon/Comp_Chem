@@ -1,47 +1,44 @@
 # Working with ChEMBL
 ChEMBL database is the primary source of data for doing any large-scale analysis in early Drug Discovery. Accessing data from ChEMBL is often seamless, which I have been using for the last three years. 
-But Sometimes, getting data from ChEMBL API is slow, and when you are still exploring what kind of data you need and how the query should look, it can take forever. Local installation of the ChEMBL database helps alleviate the issue and makes data curation fast and more workable. 
-In this blog, my objective is to try to summarize how I am using the local ChEMBL SQL database and psycopg2 python package to curate a list of all approved drugs.
+But sometimes, getting data from ChEMBL API is slow, and when you are still exploring what kind of data you need and how the query should look, it can take forever. Local installation of the ChEMBL database helps alleviate the issue and makes data curation fast and more workable. 
+In this tutorial, I am using the local ChEMBL SQL database and the psycopg2 python package to curate a list of chemical descriptors for all active compounds against single-protein targets.
 What do you need to follow this blog?
 
-To follow this blog, you need to have a local installation of the ChEMBL SQL cartridge. Follow the steps: 
+To follow this tutorial, you need to have a local installation of the ChEMBL SQL cartridge. Follow the steps or the link here: https://iwatobipen.wordpress.com/2020/06/02/communicate-chembl27-with-rdkit-postgres-cartridge-and-sqlalchemy-rdkit-chembl-postgres-razi/comment-page-1/
 ```
 $ conda install -c conda-forge postgresql
 $ conda install -c rdkit rdkit-postgresql
 $ initdb -D ~/postgresdata
 $ postgers -D ~/postgresdaa
 $ cd ~/Downloads
-$ wget ftp://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/latest/chembl_27_postgresql.tar.gz
-$ tar -vxf  chembl_27_postgresql.tar.gz
-$ cd chembl_27_postgresql/chembl_27/chemb_27_postgresql
+$ wget https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/latest/chembl_33_postgresql.tar.gz # Or whatever the latest DB version is (https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/latest/)
+$ tar -vxf  chembl_33_postgresql.tar.gz
+$ cd chembl_33_postgresql/chembl_33/chemb_33_postgresql
 $ psql -U postgres
-pgdb=# create database chembl_27;
+pgdb=# create database chembl_33;
 pgdb=# \q;
 $ pg_restore --no-owner -h localhost -p 5432 -U iwatobipen -d chembl_27 chembl_27_postgresql.dmp
 ```
-Now I installed chembl27 to my postgresql DB. Then make rdk schema. Details are described in rdkit original document. URL is below.
-https://www.rdkit.org/docs/Cartridge.html
+Now we have installed chembl33 to our postgresql DB. From here, we can make rdk schema. Details are described in the rdkit original document (https://www.rdkit.org/docs/Cartridge.html)
 ```
-chembl_27=# create extension if not exists rdkit;
-chembl_27=# create schema rdk;
-chembl_27=# select * into rdk.mols from (select molregno,mol_from_ctab(molfile::cstring) m  from compound_structures) tmp where m is not null;
-chembl_27=# create index molidx on rdk.mols using gist(m);
+chembl_33=# create extension if not exists rdkit;
+chembl_33=# create schema rdk;
+chembl_33=# select * into rdk.mols from (select molregno,mol_from_ctab(molfile::cstring) m  from compound_structures) tmp where m is not null;
+chembl_33=# create index molidx on rdk.mols using gist(m);
 CREATE INDEX
-chembl_27=# alter table rdk.mols add primary key (molregno);
+chembl_33=# alter table rdk.mols add primary key (molregno);
 ALTER TABLE
-chembl_27=# select molregno,torsionbv_fp(m) as torsionbv,morganbv_fp(m) as mfp2,featmorganbv_fp(m) as ffp2 into rdk.fps from rdk.mols;
-chembl_27=# create index fps_ttbv_idx on rdk.fps using gist(torsionbv);
+chembl_33=# select molregno,torsionbv_fp(m) as torsionbv,morganbv_fp(m) as mfp2,featmorganbv_fp(m) as ffp2 into rdk.fps from rdk.mols;
+chembl_33=# create index fps_ttbv_idx on rdk.fps using gist(torsionbv);
 CREATE INDEX
-chembl_27=# create index fps_mfp2_idx on rdk.fps using gist(mfp2);
+chembl_33=# create index fps_mfp2_idx on rdk.fps using gist(mfp2);
 CREATE INDEX
-chembl_27=# create index fps_ffp2_idx on rdk.fps using gist(ffp2);
+chembl_33=# create index fps_ffp2_idx on rdk.fps using gist(ffp2);
 CREATE INDEX
-chembl_27=# alter table rdk.fps add primary key (molregno);
+chembl_33=# alter table rdk.fps add primary key (molregno);
 ALTER TABLE
 ```
-Now I could make rdk.mols and rdk.fps table in my chembl_27 DB. Once you have the PostgreSQL and local ChEMBL database up and running, we are ready to go!
-
-This command below starts a server that we can use to interact with the ChEMBL29 SQL database.
+Now we can make rdk.mols and rdk.fps table in our chembl_27 DB. This command below starts a server that we can use to interact with the ChEMBL33 SQL database.
 ```
 postgres -D ~/postgresdata
 ```
