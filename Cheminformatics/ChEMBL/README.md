@@ -38,7 +38,7 @@ CREATE INDEX
 chembl_33=# alter table rdk.fps add primary key (molregno);
 ALTER TABLE
 ```
-Now we can make rdk.mols and rdk.fps table in our chembl_27 DB. This command below starts a server that we can use to interact with the ChEMBL33 SQL database.
+Now we can make rdk.mols and rdk.fps table in our chembl_33 DB. This command below starts a server that we can use to interact with the ChEMBL33 SQL database.
 ```
 postgres -D ~/postgresdata
 ```
