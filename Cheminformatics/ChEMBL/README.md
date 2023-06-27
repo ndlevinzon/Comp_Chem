@@ -46,13 +46,37 @@ Using local ChEMBL SQL database
 
 Now we can use SQL language to interact with the database. For this demo, let us try to extract all the approved drugs. Here is how that SQL query looks like
 ```
-SELECT DISTINCT m.chembl_id AS compound_chembl_id,
-s.canonical_smiles,
-r.compound_key
-FROM compound_structures s
-RIGHT JOIN molecule_dictionary m ON s.molregno = m.molregno
-JOIN compound_records r ON m.molregno = r.molregno
-AND m.max_phase      = 4;
+SELECT
+    act.standard_type,
+    act.standard_relation,
+    act.standard_value,
+    act.standard_units,
+    act.activity_comment,
+    cmp.canonical_smiles,
+    cmp.chembl_id,
+    tgt.pref_name AS target_name,
+    tgt.chembl_id AS target_chembl_id
+FROM
+    activities act
+JOIN
+    assays ass ON act.assay_id = ass.assay_id
+JOIN
+    compound_structures cmp ON act.molregno = cmp.molregno
+JOIN
+    target_dictionary tgt ON ass.tid = tgt.tid
+WHERE
+    act.standard_type IS NOT NULL
+    AND act.standard_relation IS NOT NULL
+    AND act.standard_value IS NOT NULL
+    AND act.standard_units IS NOT NULL
+    AND act.potential_duplicate = 0
+    AND act.pchembl_value >= 5
+    AND act.standard_relation IN ('=', '<')
+    AND act.data_validity_comment IS NULL
+    AND act.standard_flag = 1
+    AND ass.confidence_score >= 8
+    AND ass.relationship_type = 'D'
+    AND tgt.target_type = 'SINGLE PROTEIN'
 ```
 When you run the above query, it generates a long list of ~4000 molecules that are in Phase 4 (or are approved)
 
