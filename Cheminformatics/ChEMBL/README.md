@@ -1,3 +1,4 @@
+# Working with ChEMBL
 ChEMBL database is the primary source of data for doing any large-scale analysis in early Drug Discovery. Accessing data from ChEMBL is often seamless, which I have been using for the last three years. 
 But Sometimes, getting data from ChEMBL API is slow, and when you are still exploring what kind of data you need and how the query should look, it can take forever. Local installation of the ChEMBL database helps alleviate the issue and makes data curation fast and more workable. 
 In this blog, my objective is to try to summarize how I am using the local ChEMBL SQL database and psycopg2 python package to curate a list of all approved drugs.
