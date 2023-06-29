@@ -23,6 +23,8 @@ def trim_extremities(smiles):
     """Trim Parent Molecule Extremity Atoms Once"""
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
+    if not mol: raise ValueError(f"Invalid SMILES: {smiles}")
+
     analogs = []
 
     # Adjust valence of the molecule
@@ -62,6 +64,8 @@ def BO_stepup(smiles):
     """Recursively Increases Bond Order Until Maximum Conjugation"""
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
+    if not mol:
+        raise ValueError(f"Invalid SMILES: {smiles}")
     analogs = []
 
     # Adjust valence of the molecule
@@ -114,12 +118,15 @@ def BO_stepup(smiles):
     analogs = [mol for mol in analogs if mol != mol and Chem.MolToSmiles(mol) != smiles]
     return analogs
 
+
 def BO_stepdown(smiles):
     """Decreases Bond Order of Non-Single Bonds"""
 
     def convert_to_explicit_bonds(smiles):
         """Converts SMILES into a representation with explicit bond notation"""
         mol = Chem.MolFromSmiles(smiles)
+        if not mol:
+            raise ValueError(f"Invalid SMILES: {smiles}")
         Chem.Kekulize(mol)  # Ensure explicit bond notation
         return Chem.MolToSmiles(mol, kekuleSmiles=True)
 
@@ -162,6 +169,8 @@ def ring_breaker(smiles):
     """Enumerates Rings In Parent And Opens Rings"""
     # Create the molecule from SMILES
     mol = Chem.MolFromSmiles(smiles)
+    if not mol:
+        raise ValueError(f"Invalid SMILES: {smiles}")
     analogs = []
 
     # Disable kekulization
@@ -223,6 +232,8 @@ def ring_maker(smiles):
     """Enumerates Terminal -CH3, Finds Paths Of Length (4, 5) And Forms Rings With sp3 Carbons On Path"""
     # Create the molecule from SMILES
     mol = Chem.MolFromSmiles(smiles)
+    if not mol:
+        raise ValueError(f"Invalid SMILES: {smiles}")
     analogs = []
 
     # Adjust valence of the molecule
@@ -299,6 +310,8 @@ def ring_maker(smiles):
 def walks(smiles, target_num):
     """Performs Walks On Parent Molecule"""
     mol = Chem.MolFromSmiles(smiles)
+    if not mol:
+        raise ValueError(f"Invalid SMILES: {smiles}")
     analogs = []
     for atom in mol.GetAtoms():
         if atom.GetSymbol() == 'C' and atom.GetIsAromatic():
@@ -318,6 +331,8 @@ def walks(smiles, target_num):
 def heterocycle_walks(smiles):
     """Performs Heterocycle Walks On Parent Molecule"""
     mol = Chem.MolFromSmiles(smiles)
+    if not mol:
+        raise ValueError(f"Invalid SMILES: {smiles}")
     analogs = []
 
     # Enumerate heterocycles and append RWMol objects to analogs list
@@ -339,6 +354,8 @@ def sulfur_walks(smiles): return walks(smiles, target_num=16)
 
 def scanning(smiles, fragments):
     mol = Chem.MolFromSmiles(smiles)
+    if not mol:
+        raise ValueError(f"Invalid SMILES: {smiles}")
     mol = Chem.AddHs(mol)
 
     analogs = set()  # Use a set to store unique analogs
@@ -402,10 +419,10 @@ def bioisosters_scanning(smiles):
         'C(=O)O',  # Carboxylic acid
         'C(=O)N',  # Amide
         'C(=O)N(=O)=O',  # Nitro group
-        'CN',  # Cyanide
+        'C#N',  # Cyanide
         'C(=O)Cl',  # Acid chloride
         'C(=O)F',  # Fluoride
-        '[C](F)(F)F', # Trifluoro
+        '[C](F)(F)F',  # Trifluoro
         'C(=O)Br',  # Bromide
         'C(=O)I',  # Iodide
         'C(=S)N',  # Thioamide
@@ -415,7 +432,9 @@ def bioisosters_scanning(smiles):
         'C(=O)OCC',  # Ester
         'C(=O)OC',  # Ether
         'C(=O)NCC',  # Carbamate
-        'C(=O)OCC(=O)O'  # Anhydride
+        'C(=O)OCC(=O)O',  # Anhydride
+        'C(c1ccccc1)',   # -CH2-Benzene
+        'C(n1cccc1)' # -CH2-Pyrrole
     ]
     return scanning(smiles, fragments)
 
@@ -462,8 +481,8 @@ def main():
 
     # Specify the input and output file names
     path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/'
-    smiles_input_filename = 'smi-zn-ampc-all.smi'
-    output_file_prefix = "phenol_NEW_total"
+    smiles_input_filename = 'phenol_benchmark3-analogs-i10897-o1426705.smi'
+    output_file_prefix = "phenol_benchmark4"
 
     # Define the list of parent SMILES to take pictures of
     take_picture = []  # Add your desired parent SMILES here
@@ -489,20 +508,30 @@ def main():
             analog_key_scan = [method[1], []]
 
             # Generate analogues using the specified method
-            for analog in method[0](smiles):
-                analog_smiles = Chem.MolToSmiles(analog)
-                print(analog_smiles)
+            try:
+                for analog in method[0](smiles):
+                    try:
+                        analog_smiles = Chem.MolToSmiles(analog)
+                        if not analog_smiles:
+                            raise ValueError(f"Invalid SMILES: {analog_smiles}")
+                        if analog_smiles not in all_analogs:
+                            fakezinc = "fakezinc" + str(analog_count).zfill(8)
+                            lines_out.append(f"{analog_smiles} {fakezinc}")
+                            analog_key_scan[1].append([analog_smiles, fakezinc])
+                            all_analogs.append(analog_smiles)
+                            analog_count += 1
+                        else:
+                            continue
+                    except ValueError as e:
+                        print(str(e))  # Skip the entry and print the error message
+                        continue  # Skip to the next iteration
+                    print(analog_smiles)
 
-                if analog_smiles not in all_analogs:
-                    fakezinc = "fakezinc" + str(analog_count).zfill(8)
-                    lines_out.append(f"{analog_smiles} {fakezinc}")
-                    analog_key_scan[1].append([analog_smiles, fakezinc])
-                    all_analogs.append(analog_smiles)
-                    analog_count += 1
-                else:
-                    continue
+                analog_key_line[1].append(analog_key_scan)
 
-            analog_key_line[1].append(analog_key_scan)
+            except Exception as e:
+                print(f"Error generating analogs: {str(e)}")
+                continue
 
         analog_key.append(analog_key_line)
 
