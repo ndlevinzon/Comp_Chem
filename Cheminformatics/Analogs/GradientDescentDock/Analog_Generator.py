@@ -10,14 +10,49 @@ from rdkit import Chem
 from rdkit.Chem import Draw
 from rdkit.Chem.rdchem import HybridizationType, BondType
 from rdkit.Chem.EnumerateHeterocycles import EnumerateHeterocycles
+from rdkit.Chem.EnumerateStereoisomers import EnumerateStereoisomers
 
 # Get the current time before running the code
 start_time = time.time()
 print(f"Starting Time: {start_time}")
 
+# --------------------------Stereoisomer Generator-------------------------- #
+def stereoisomerism(smiles):
+    parent_mol = Chem.MolFromSmiles(smiles)
+    if parent_mol is None:
+        print("Invalid parent molecule SMILES")
+        return
 
+    parent_mol = Chem.AddHs(parent_mol)
+    parent_mol = Chem.MolFromSmiles(Chem.MolToSmiles(parent_mol, isomericSmiles=True))
+
+    analogs = []
+
+    # Enumerate chiral centers
+    chiral_centers = [atom.GetIdx() for atom in parent_mol.GetAtoms() if atom.GetChiralTag() != Chem.ChiralType.CHI_UNSPECIFIED]
+    for chiral_idx in chiral_centers:
+        chiral_atom = parent_mol.GetAtomWithIdx(chiral_idx)
+        chiral_atom.SetChiralTag(Chem.ChiralType.CHI_UNSPECIFIED)
+
+    # Enumerate E-Z isomerism
+    double_bonds = [bond.GetIdx() for bond in parent_mol.GetBonds() if bond.GetBondType() == Chem.BondType.DOUBLE]
+    for double_bond_idx in double_bonds:
+        double_bond = parent_mol.GetBondWithIdx(double_bond_idx)
+        double_bond.SetStereo(Chem.BondStereo.STEREOANY)
+
+    Chem.RemoveStereochemistry(parent_mol)
+
+    # Generate stereoisomers
+    unique_smiles = set()
+    for isomer in EnumerateStereoisomers(parent_mol):
+        smiles = Chem.MolToSmiles(isomer, isomericSmiles=True)
+        if smiles != parent_smiles and smiles not in unique_smiles:
+            unique_smiles.add(smiles)
+            analogs.append(isomer)
+
+    return analogs
+    
 # --------------------------Extremity Trimmer-------------------------- #
-
 
 def trim_extremities(smiles):
     """Trim Parent Molecule Extremity Atoms Once"""
