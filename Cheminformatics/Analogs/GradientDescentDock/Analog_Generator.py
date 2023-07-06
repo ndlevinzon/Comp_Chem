@@ -8,7 +8,7 @@ from PIL import Image
 from collections import deque
 from rdkit import Chem
 from rdkit.Chem import Draw
-from rdkit.Chem.rdchem import HybridizationType, BondType
+from rdkit.Chem.rdchem import HybridizationType, BondType, ChiralType, BondStereo, AtomValenceException
 from rdkit.Chem.EnumerateHeterocycles import EnumerateHeterocycles
 from rdkit.Chem.EnumerateStereoisomers import EnumerateStereoisomers
 
@@ -16,20 +16,26 @@ from rdkit.Chem.EnumerateStereoisomers import EnumerateStereoisomers
 start_time = time.time()
 print(f"Starting Time: {start_time}")
 
+
 # --------------------------Stereoisomer Generator-------------------------- #
+
 def stereoisomerism(smiles):
     parent_mol = Chem.MolFromSmiles(smiles)
     if parent_mol is None:
         print("Invalid parent molecule SMILES")
-        return
+        return None
 
     parent_mol = Chem.AddHs(parent_mol)
-    parent_mol = Chem.MolFromSmiles(Chem.MolToSmiles(parent_mol, isomericSmiles=True))
+
+    # Check if parent compound has stereocenters
+    if not any(atom.GetChiralTag() != Chem.ChiralType.CHI_UNSPECIFIED for atom in parent_mol.GetAtoms()):
+        return [Chem.RWMol(parent_mol)]  # Return the parent compound itself if no stereocenters are present
 
     analogs = []
 
     # Enumerate chiral centers
-    chiral_centers = [atom.GetIdx() for atom in parent_mol.GetAtoms() if atom.GetChiralTag() != Chem.ChiralType.CHI_UNSPECIFIED]
+    chiral_centers = [atom.GetIdx() for atom in parent_mol.GetAtoms() if
+                      atom.GetChiralTag() != Chem.ChiralType.CHI_UNSPECIFIED]
     for chiral_idx in chiral_centers:
         chiral_atom = parent_mol.GetAtomWithIdx(chiral_idx)
         chiral_atom.SetChiralTag(Chem.ChiralType.CHI_UNSPECIFIED)
@@ -44,21 +50,25 @@ def stereoisomerism(smiles):
 
     # Generate stereoisomers
     unique_smiles = set()
-    for isomer in EnumerateStereoisomers(parent_mol):
+    for isomer in Chem.EnumerateStereoisomers(parent_mol):
+        isomer = Chem.AddHs(isomer)  # Add hydrogens to the isomer
         smiles = Chem.MolToSmiles(isomer, isomericSmiles=True)
-        if smiles != parent_smiles and smiles not in unique_smiles:
+        if smiles != smiles and smiles not in unique_smiles:
             unique_smiles.add(smiles)
-            analogs.append(isomer)
+            analogs.append(Chem.RWMol(isomer))
 
     return analogs
-    
+
+
 # --------------------------Extremity Trimmer-------------------------- #
+
 
 def trim_extremities(smiles):
     """Trim Parent Molecule Extremity Atoms Once"""
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
-    if not mol: raise ValueError(f"Invalid SMILES: {smiles}")
+    if not mol:
+        raise ValueError(f"Invalid SMILES: {smiles}")
 
     analogs = []
 
@@ -91,7 +101,13 @@ def trim_extremities(smiles):
 
     # Remove duplicates and the initial SMILES from the analogs list
     analogs = [mol for mol in analogs if mol != mol and Chem.MolToSmiles(mol) != smiles]
-    return analogs
+
+    # Enumerate isomers for the analogs
+    isomer_analogs = []
+    for analog in analogs:
+        isomers = stereoisomerism(Chem.MolToSmiles(analog, isomericSmiles=True))
+        isomer_analogs.extend(isomers)
+    return isomer_analogs
 
 # --------------------------Bond Order Changes-------------------------- #
 
@@ -112,7 +128,7 @@ def BO_stepup(smiles):
     # Find indices of carbon-carbon single bonds
     c_c_bond_indices = [bond.GetIdx() for bond in rw_mol.GetBonds() if
                         bond.GetBeginAtom().GetAtomicNum() == 6 and bond.GetEndAtom().GetAtomicNum() == 6
-                        and bond.GetBondType() == Chem.BondType.SINGLE]
+                        and bond.GetBondType() == BondType.SINGLE]
 
     def increase_bond_order_recursive(bond_indices, mol_copy):
         # Base case: no more bond indices to process
@@ -129,17 +145,17 @@ def BO_stepup(smiles):
         n_neighbors1 = len([n for n in bond.GetBeginAtom().GetNeighbors()])
         n_neighbors2 = len([n for n in bond.GetEndAtom().GetNeighbors()])
 
-        if bond.GetBondType() == Chem.BondType.SINGLE and n_neighbors1 < 3 and n_neighbors2 < 3:
+        if bond.GetBondType() == BondType.SINGLE and n_neighbors1 < 3 and n_neighbors2 < 3:
             # Increase bond order from single to double
             try:
-                mol_copy_new.GetBondWithIdx(bond_idx).SetBondType(Chem.BondType.DOUBLE)
+                mol_copy_new.GetBondWithIdx(bond_idx).SetBondType(BondType.DOUBLE)
                 analogs.append(Chem.RWMol(mol_copy_new))
             except:
                 print("Error: Could not make Double Bond")
-        elif bond.GetBondType() == Chem.BondType.DOUBLE and n_neighbors1 < 2 and n_neighbors2 < 2:
+        elif bond.GetBondType() == BondType.DOUBLE and n_neighbors1 < 2 and n_neighbors2 < 2:
             # Increase bond order from double to triple
             try:
-                mol_copy_new.GetBondWithIdx(bond_idx).SetBondType(Chem.BondType.TRIPLE)
+                mol_copy_new.GetBondWithIdx(bond_idx).SetBondType(BondType.TRIPLE)
                 analogs.append(Chem.RWMol(mol_copy_new))
             except:
                 print("Error: Could not make Triple Bond")
@@ -151,7 +167,13 @@ def BO_stepup(smiles):
 
     # Remove duplicates and the initial SMILES from the analogs list
     analogs = [mol for mol in analogs if mol != mol and Chem.MolToSmiles(mol) != smiles]
-    return analogs
+
+    # Enumerate isomers for the analogs
+    isomer_analogs = []
+    for analog in analogs:
+        isomers = stereoisomerism(Chem.MolToSmiles(analog, isomericSmiles=True))
+        isomer_analogs.extend(isomers)
+    return isomer_analogs
 
 
 def BO_stepdown(smiles):
@@ -196,7 +218,12 @@ def BO_stepdown(smiles):
     analogs_smiles = list(set(analogs_smiles) - {smiles})
     analogs = [Chem.MolFromSmiles(smiles) for smiles in analogs_smiles]
 
-    return analogs
+    # Enumerate isomers for the analogs
+    isomer_analogs = []
+    for analog in analogs:
+        isomers = stereoisomerism(Chem.MolToSmiles(analog, isomericSmiles=True))
+        isomer_analogs.extend(isomers)
+    return isomer_analogs
 
 # --------------------------Ring Changes-------------------------- #
 
@@ -233,7 +260,7 @@ def ring_breaker(smiles):
                 for j in range(len(adjacency_matrix)):
                     for k in range(j + 1, len(adjacency_matrix)):
                         if adjacency_matrix[j][k] and not mol_copy.GetBondBetweenAtoms(j, k):
-                            mol_copy.AddBond(j, k, Chem.BondType.SINGLE)
+                            mol_copy.AddBond(j, k, BondType.SINGLE)
 
                 # Update the molecule properties and sanitize
                 mol_copy.UpdatePropertyCache(strict=False)
@@ -246,7 +273,7 @@ def ring_breaker(smiles):
                     sanitized_analogs = [mol_copy]
                     for analog in sanitized_analogs:
                         Chem.GetSymmSSSR(analog)
-                        smiles = Chem.MolToSmiles(analog, isomericSmiles=True)
+                        smiles = Chem.MolToSmiles(analog)
                         smiles = re.sub(r'\(\)', '', smiles)  # Remove empty parentheses
                         smiles = re.sub(r'\[.*?\]', '', smiles)  # Remove brackets denoting bond breakages
                         if smiles.startswith('*'):  # Check if SMILES starts with *
@@ -254,13 +281,19 @@ def ring_breaker(smiles):
                         sanitized_analog = Chem.MolFromSmiles(smiles)
                         if sanitized_analog is not None:
                             analogs.append(sanitized_analog)
-                except Chem.AtomValenceException:
+                except AtomValenceException:
                     # Skip if valence adjustment fails during sanitization
                     continue
 
     # Remove duplicates and the initial SMILES from the analogs list
     analogs = [mol for mol in analogs if Chem.MolToSmiles(mol) != smiles]
-    return analogs
+
+    # Enumerate isomers for the analogs
+    isomer_analogs = []
+    for analog in analogs:
+        isomers = stereoisomerism(Chem.MolToSmiles(analog,isomericSmiles=True))
+        isomer_analogs.extend(isomers)
+    return isomer_analogs
 
 
 def ring_maker(smiles):
@@ -338,16 +371,25 @@ def ring_maker(smiles):
 
     # Remove duplicates and the initial SMILES from the analogs list
     analogs = [mol for mol in analogs if Chem.MolToSmiles(mol) != smiles]
-    return analogs
+
+    # Enumerate isomers for the analogs
+    isomer_analogs = []
+    for analog in analogs:
+        isomers = stereoisomerism(Chem.MolToSmiles(analog, isomericSmiles=True))
+        isomer_analogs.extend(isomers)
+    return isomer_analogs
 
 # --------------------------Atom Walks-------------------------- #
 
 def walks(smiles, target_num):
     """Performs Walks On Parent Molecule"""
     mol = Chem.MolFromSmiles(smiles)
-    if not mol:
+    if mol is None:
         raise ValueError(f"Invalid SMILES: {smiles}")
+
+    # Create a copy of the molecule for modification
     analogs = []
+
     for atom in mol.GetAtoms():
         if atom.GetSymbol() == 'C' and atom.GetIsAromatic():
             analog = Chem.RWMol(mol)
@@ -355,12 +397,19 @@ def walks(smiles, target_num):
             a_neighbors = [n for n in a.GetNeighbors()]
             if len(a_neighbors) == 2:
                 a.SetAtomicNum(target_num)
-                # Chem.SanitizeMol(analog)
-                analogs.append(analog)
+                analog_mol = Chem.MolFromSmiles(Chem.MolToSmiles(analog, isomericSmiles=True))
+                if analog_mol is not None:
+                    analogs.append(analog_mol)
 
     # Remove duplicates and the initial SMILES from the analogs list
-    analogs = [mol for mol in analogs if Chem.MolToSmiles(mol) != smiles]
-    return analogs
+    analogs = [mol for mol in analogs if mol is not None and Chem.MolToSmiles(mol) != smiles]
+
+    # Enumerate isomers for the analogs
+    isomer_analogs = []
+    for analog in analogs:
+        isomers = stereoisomerism(Chem.MolToSmiles(analog, isomericSmiles=True))
+        isomer_analogs.extend(isomers)
+    return isomer_analogs
 
 
 def heterocycle_walks(smiles):
@@ -377,7 +426,13 @@ def heterocycle_walks(smiles):
 
     # Remove duplicates and the initial SMILES from the analogs list
     analogs = [mol for mol in analogs if Chem.MolToSmiles(mol) != smiles]
-    return analogs
+
+    # Enumerate isomers for the analogs
+    isomer_analogs = []
+    for analog in analogs:
+        isomers = stereoisomerism(Chem.MolToSmiles(analog,isomericSmiles=True))
+        isomer_analogs.extend(isomers)
+    return isomer_analogs
 
 
 # Functions to perform specific walking methods
@@ -389,7 +444,7 @@ def sulfur_walks(smiles): return walks(smiles, target_num=16)
 
 def scanning(smiles, fragments):
     mol = Chem.MolFromSmiles(smiles)
-    if not mol:
+    if mol is None:
         raise ValueError(f"Invalid SMILES: {smiles}")
     mol = Chem.AddHs(mol)
 
@@ -428,17 +483,25 @@ def scanning(smiles, fragments):
                     # Add the bond between the carbon and the fragment
                     analog.AddBond(carbon.GetIdx(), atom_map[0], Chem.BondType.SINGLE)
 
-                # Sanitize the generated analog molecule
                 try:
-                    Chem.SanitizeMol(analog)
-                    analog_smiles = Chem.MolToSmiles(analog, isomericSmiles=True)
+                    # Sanitize the generated analog molecule
+                    Chem.SanitizeMol(analog, catchErrors=True)
+                    analog_smiles = Chem.MolToSmiles(analog)
                     if '.' not in analog_smiles:
                         analogs.add(analog_smiles)
                 except (Chem.MolSanitizeException, Chem.KekulizeException) as e:
                     print("Molecule sanitization failed:", str(e))
                     continue
 
-    return [Chem.MolFromSmiles(analog_smiles) for analog_smiles in analogs]
+    analogs = [Chem.MolFromSmiles(analog_smiles) for analog_smiles in analogs]
+
+    # Enumerate isomers for the analogs
+    isomer_analogs = []
+    for analog in analogs:
+        isomers = stereoisomerism(Chem.MolToSmiles(analog, isomericSmiles=True))
+        isomer_analogs.extend(isomers)
+    return isomer_analogs
+
 
 # Functions to perform specific scanning methods
 def methyl_scanning(smiles): return scanning(smiles, ['C'])
@@ -516,8 +579,8 @@ def main():
 
     # Specify the input and output file names
     path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/'
-    smiles_input_filename = 'phenol_benchmark3-analogs-i10897-o1426705.smi'
-    output_file_prefix = "phenol_benchmark4"
+    smiles_input_filename = 'rings.smi'
+    output_file_prefix = "stereo2"
 
     # Define the list of parent SMILES to take pictures of
     take_picture = []  # Add your desired parent SMILES here
@@ -546,7 +609,7 @@ def main():
             try:
                 for analog in method[0](smiles):
                     try:
-                        analog_smiles = Chem.MolToSmiles(analog)
+                        analog_smiles = Chem.MolToSmiles(analog, isomericSmiles=True)
                         if not analog_smiles:
                             raise ValueError(f"Invalid SMILES: {analog_smiles}")
                         if analog_smiles not in all_analogs:
