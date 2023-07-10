@@ -79,7 +79,7 @@ def add_scaffold_and_group(df):
     # Calculate the proportion of entries with a 10-fold reduction in POTENCY_Converted within each group
     df['Prop_10X'] = 0.0  # Initialize the 'Prop_10X' column with 0.0
 
-    # Iterate through each group over 25 members
+    # Iterate through each group over 5 members
     group_counts = df['GROUP'].value_counts()
     groups_over_5 = group_counts[group_counts > 5].index.tolist()
 
