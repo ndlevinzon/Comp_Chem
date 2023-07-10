@@ -178,14 +178,14 @@ def clean_df(df):
         df_copy = df_copy[~((df_copy['TARGET'] == target) & (df_copy['GROUP'].isin(small_groups)))]
 
 
-    # Filter the DataFrame based on the heavy atom deviation
-    df_cleaned = df_copy[abs(df_copy['HeavyAtomCount'] - df_copy['BemisMurckoScaffoldHeavyAtomCount']) <= 2].copy()
+        # Filter the DataFrame based on the heavy atom deviation
+        df_cleaned = df_copy[abs(df_copy['HeavyAtomCount'] - df_copy['BemisMurckoScaffoldHeavyAtomCount']) <= 2].copy()
 
-    # Remove the extra columns
-    df_cleaned.drop(['HeavyAtomCount', 'BemisMurckoScaffoldHeavyAtomCount'], axis=1, inplace=True)
+        # Remove the extra columns
+        df_cleaned.drop(['HeavyAtomCount', 'BemisMurckoScaffoldHeavyAtomCount'], axis=1, inplace=True)
 
-    # Return the filtered DataFrame
-    return df_cleaned
+        # Return the filtered DataFrame
+        return df_cleaned
 
 
 def create_scatter(df, subtitle):
@@ -224,15 +224,15 @@ def create_scatter(df, subtitle):
     # Combine data points from the groups over 25 members
     combined_x = []
     combined_y = []
-    groups_over_25 = group_counts[(group_counts > 25) & (group_counts.index != '')].index.tolist()
-    for group in groups_over_25:
+    groups_over_5 = group_counts[(group_counts > 5) & (group_counts.index != '')].index.tolist()
+    for group in groups_over_5:
         group_data = df[df['GROUP'] == group]
         combined_x.extend(x_data[group_data.index])
         combined_y.extend(y_data[group_data.index])
 
         # Each group will have a unique color
         color = plt.cm.Set1(group % plt.cm.Set1.N)
-        plt.scatter(x_data[group_data.index], y_data[group_data.index], color=color, alpha=0.6, s=10)
+        plt.scatter(-(x_data[group_data.index]), y_data[group_data.index], color=color, alpha=0.6, s=10)
 
     plt.ylim(0, 1)
     plt.xlabel(x_label)
@@ -247,7 +247,7 @@ def create_histogram(df, subtitle):
 
     # Select groups with more than 25 members
     group_counts = df['GROUP'].value_counts()
-    valid_groups = group_counts[group_counts > 25].index.tolist()
+    valid_groups = group_counts[group_counts > 5].index.tolist()
 
     # Set up the histogram plot
     plt.figure()
