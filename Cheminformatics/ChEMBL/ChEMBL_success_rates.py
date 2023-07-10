@@ -15,6 +15,7 @@ from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors
 from rdkit.Chem.Scaffolds import MurckoScaffold
 from sqlalchemy import create_engine
+import argparse
 
 
 def read_csv(csv_file):
@@ -258,13 +259,10 @@ def create_histogram(df, subtitle):
     plt.show()
 
 
-def main():
-    # Source CSV from ChEMBL
-    csv_file = 'ligands/P43220/DOWNLOAD-hXof2Ip7cYfnHlnIyKUFibEu7t1z5wl5gcZnCuLcJZ4=.csv'
+def main(csv_file, database_file):
     subtitle = 'Glucagon-like peptide 1 receptor, UniProt: P43220'
 
     # Connect to the SQLite database
-    database_file = 'ligands/glucagon_histogram_data_filtered.db'
     engine = create_engine(f'sqlite:///{database_file}')
 
     # Check if the database file exists
@@ -312,5 +310,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Process ChEMBL data and create histograms')
+    parser.add_argument('--csv', required=True, help='Path to the input CSV file')
+    parser.add_argument('--database', required=True, help='Path to the database file')
+    args = parser.parse_args()
+
+    main(csv_file=args.csv, database_file=args.database)
 
