@@ -177,7 +177,6 @@ def clean_df(df):
         # Remove the small groups from the DataFrame
         df_copy = df_copy[~((df_copy['TARGET'] == target) & (df_copy['GROUP'].isin(small_groups)))]
 
-
         # Filter the DataFrame based on the heavy atom deviation
         df_cleaned = df_copy[abs(df_copy['HeavyAtomCount'] - df_copy['BemisMurckoScaffoldHeavyAtomCount']) <= 2].copy()
 
