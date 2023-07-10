@@ -310,6 +310,7 @@ def main(csv_file, database_file):
 
 
 if __name__ == '__main__':
+    # Usage: python script.py --csv input.csv --database data.db
     parser = argparse.ArgumentParser(description='Process ChEMBL data and create histograms')
     parser.add_argument('--csv', required=True, help='Path to the input CSV file')
     parser.add_argument('--database', required=True, help='Path to the database file')
