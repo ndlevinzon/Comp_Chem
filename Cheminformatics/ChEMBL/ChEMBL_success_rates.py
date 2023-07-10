@@ -265,31 +265,22 @@ def main(csv_file, database_file):
     # Connect to the SQLite database
     engine = create_engine(f'sqlite:///{database_file}')
 
+    df = read_csv(csv_file=csv_file)
+    df = add_scaffold_and_group(df)
+    df = rank_entries(df)
+    df_cleaned = clean_df(df)
+
+    # Graph data
+    create_scatter(df=df_cleaned, subtitle=subtitle)
+     create_histogram(df=df_cleaned, subtitle=subtitle)
+
     # Check if the database file exists
     if not os.path.isfile(database_file):
-        df = read_csv(csv_file=csv_file)
-        df = add_scaffold_and_group(df)
-        df = rank_entries(df)
-        df_cleaned = clean_df(df)
-
-        # Graph data
-        create_scatter(df=df_cleaned, subtitle=subtitle)
-        create_histogram(df=df_cleaned, subtitle=subtitle)
-
         # Store the DataFrame in the database
         df.to_sql('histogram_data', con=engine, index=False)
         print("Database created and data inserted.")
+        
     else:
-        # Read the new data from CSV
-        df = read_csv(csv_file=csv_file)
-        df = add_scaffold_and_group(df)
-        df = rank_entries(df)
-        df_cleaned = clean_df(df)
-
-        # Graph data
-        create_scatter(df=df_cleaned, subtitle=subtitle)
-        create_histogram(df=df_cleaned, subtitle=subtitle)
-
         # Retrieve the existing data from the database
         query = "SELECT TARGET FROM histogram_data"
         existing_targets = pd.read_sql_query(query, con=engine)['TARGET'].tolist()
