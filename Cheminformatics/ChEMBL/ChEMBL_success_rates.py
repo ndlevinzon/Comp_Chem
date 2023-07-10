@@ -188,7 +188,7 @@ def clean_df(df):
         return df_cleaned
 
 
-def create_scatter(df, subtitle):
+def create_scatter(df, subtitle, group_number=None):
     """Plot the families sharing the same B-M Scaffold"""
     plt.figure()
 
@@ -203,36 +203,50 @@ def create_scatter(df, subtitle):
     # Select the groups with more than 25 members
     group_counts = df['GROUP'].value_counts()
 
-    # Print from the top five groups
-    top_groups = group_counts[group_counts.index != ''].nlargest(5).index.tolist()
-    print("Top 5 Most Populous Groups:", top_groups)
-    for group in top_groups:
-        group_data = df[df['GROUP'] == group]
+    if group_number is not None:
+        # Plot a specific group if group_number is specified
+        group_data = df[df['GROUP'] == group_number]
 
         # Print the scaffold for the group
         scaffold = group_data['SCAFFOLD'].iloc[0]
-        print(f"Group {group}: Scaffold - {scaffold}")
+        print(f"Group {group_number}: Scaffold - {scaffold}")
 
         lowest_potency_index = group_data['POTENCY'].idxmin()
         lowest_potency_smiles = group_data.loc[lowest_potency_index, 'SMILES']
-        print(f"Group: {group}, Lowest POTENCY SMILES: {lowest_potency_smiles}")
+        print(f"Group: {group_number}, Lowest POTENCY SMILES: {lowest_potency_smiles}")
 
         highest_potency_index = group_data['POTENCY'].idxmax()
         highest_potency_smiles = group_data.loc[highest_potency_index, 'SMILES']
-        print(f"Group: {group}, Highest POTENCY SMILES: {highest_potency_smiles}")
-
-    # Combine data points from the groups over 25 members
-    combined_x = []
-    combined_y = []
-    groups_over_5 = group_counts[(group_counts > 5) & (group_counts.index != '')].index.tolist()
-    for group in groups_over_5:
-        group_data = df[df['GROUP'] == group]
-        combined_x.extend(x_data[group_data.index])
-        combined_y.extend(y_data[group_data.index])
+        print(f"Group: {group_number}, Highest POTENCY SMILES: {highest_potency_smiles}")
 
         # Each group will have a unique color
-        color = plt.cm.Set1(group % plt.cm.Set1.N)
-        plt.scatter(-(x_data[group_data.index]), y_data[group_data.index], color=color, alpha=0.6, s=10)
+        color = plt.cm.Set1(group_number % plt.cm.Set1.N)
+        plt.scatter(x_data[group_data.index], y_data[group_data.index], color=color, alpha=0.6, s=10)
+
+    else:
+        # Print from the top five groups
+        top_groups = group_counts[group_counts.index != ''].nlargest(5).index.tolist()
+        print("Top 5 Most Populous Groups:", top_groups)
+        for group in top_groups:
+            group_data = df[df['GROUP'] == group]
+
+            # Print the scaffold for the group
+            scaffold = group_data['SCAFFOLD'].iloc[0]
+            print(f"Group {group}: Scaffold - {scaffold}")
+
+            lowest_potency_index = group_data['POTENCY'].idxmin()
+            lowest_potency_smiles = group_data.loc[lowest_potency_index, 'SMILES']
+            print(f"Group: {group}, Lowest POTENCY SMILES: {lowest_potency_smiles}")
+
+            highest_potency_index = group_data['POTENCY'].idxmax()
+            highest_potency_smiles = group_data.loc[highest_potency_index, 'SMILES']
+            print(f"Group: {group}, Highest POTENCY SMILES: {highest_potency_smiles}")
+
+        # Combine data points from the groups over 5 members
+        groups_over_5 = group_counts[(group_counts > 5) & (group_counts.index != '')].index.tolist()
+        for group in groups_over_5:
+            group_data = df[df['GROUP'] == group]
+            plt.scatter(x_data[group_data.index], y_data[group_data.index], alpha=0.6, s=10)
 
     plt.ylim(0, 1)
     plt.xlabel(x_label)
@@ -260,7 +274,7 @@ def create_histogram(df, subtitle):
 
 
 def main(csv_file, database_file):
-    subtitle = 'Glucagon-like peptide 1 receptor, UniProt: P43220'
+    subtitle = 'Target Name'
 
     # Connect to the SQLite database
     engine = create_engine(f'sqlite:///{database_file}')
@@ -271,8 +285,8 @@ def main(csv_file, database_file):
     df_cleaned = clean_df(df)
 
     # Graph data
-    create_scatter(df=df_cleaned, subtitle=subtitle)
-     create_histogram(df=df_cleaned, subtitle=subtitle)
+    create_scatter(df=df_cleaned, subtitle=subtitle, group_number=375)
+    create_histogram(df=df_cleaned, subtitle=subtitle)
 
     # Check if the database file exists
     if not os.path.isfile(database_file):
