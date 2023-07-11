@@ -5,7 +5,7 @@
 
 # Getting individual atom contributions with scoreopt_so
 
-## First you need an <tt>.eel1</tt> file to be scored===
+## First you need an <tt>.eel1</tt> file to be scored
 ### For the xtal-lig.mol2 in its crystallographic pose
 New way that outputs your.eel1 starting from your.pdb directly
 *run '<tt>$mud/to_eel1.csh your.pdb</tt>'. 
