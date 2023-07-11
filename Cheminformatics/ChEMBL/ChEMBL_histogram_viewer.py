@@ -9,41 +9,42 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import norm, kstest
+from scipy.stats import binom, kstest, gaussian_kde
 from sqlalchemy import create_engine
+from statsmodels.distributions.empirical_distribution import ECDF
 
 def main():
-    # Connect to the SQLite database
-    database_file = 'ligands/histogram_data_filtered.db'
-    engine = create_engine(f'sqlite:///{database_file}')
+    # List of database files
+    database_files = [
+        '/mnt/nfs/home/nlevinzon/chembl/total/EC50_ChemblDB.db',
+        '/mnt/nfs/home/nlevinzon/chembl/total/IC50_ChemblDB.db',
+	'/mnt/nfs/home/nlevinzon/chembl/total/Potency_ChemblDB.db',
+        '/mnt/nfs/home/nlevinzon/chembl/total/Ki_ChemblDB.db'
+        # Add more database files as needed
+    ]
 
-    # Retrieve the updated data from the database
-    query = "SELECT * FROM histogram_data"
-    df = pd.read_sql_query(query, con=engine)
+    # Connect to the databases and retrieve the data
+    data_frames = []
+    for database_file in database_files:
+        engine = create_engine(f'sqlite:///{database_file}')
+        query = "SELECT * FROM histogram_data"
+        df = pd.read_sql_query(query, con=engine)
+        data_frames.append(df)
+
+    # Concatenate the data frames into a single data frame
+    df = pd.concat(data_frames)
 
     # Filter out values not within the valid range
     filtered_data = df['Prop_10X'][(df['Prop_10X'] > 0) & (df['Prop_10X'] < np.inf)]
 
-    # Calculate z-scores for each data point
-    z_scores = (filtered_data - np.mean(filtered_data)) / np.std(filtered_data)
-
-    # Define the threshold for outliers (e.g., z-score > 3)
-    outlier_threshold = 3
-
-    # Identify the outliers based on the z-scores
-    outliers = filtered_data[z_scores > outlier_threshold]
-
-    # Remove outliers from the filtered_data dataset
-    filtered_data = filtered_data[z_scores <= outlier_threshold]
-
     # Name of Target
-    subtitle = 'ChEMBL Top 25 Single Proteins with the Most Active Compounds'
+    subtitle = 'ChEMBL: All Active Compounds for Single Protein Targets'
 
     # Set up the bar chart
     fig, ax = plt.subplots()
 
     # Define the bin edges and width
-    bin_edges = np.arange(0, 0.55, 0.05)
+    bin_edges = np.arange(0, 0.55, 0.025)
     bin_width = bin_edges[1] - bin_edges[0]
 
     # Calculate the histogram
@@ -55,45 +56,50 @@ def main():
     # Plot the bar chart
     ax.bar(bin_edges[:-1], hist_normalized, width=bin_width, align='edge', alpha=0.5, edgecolor='black')
 
-    # Fit the normal distribution to the filtered data
-    mu, std = norm.fit(filtered_data)
+    # Perform KDE on the filtered data
+    kde = gaussian_kde(filtered_data)
 
-    # Generate the x-values for the fitted normal distribution
+    # Generate the x-values for the binomial distribution
     x = np.linspace(0, 1, 100)
 
-    # Evaluate the fitted normal distribution at the x-values
-    fitted_pdf = norm.pdf(x, loc=mu, scale=std)
+    # Evaluate the KDE at the x-values
+    kde_values = kde(x)
 
-    # Scale the fitted distribution by the maximum value of the histogram
-    scaling_factor = np.max(hist_normalized) / np.max(fitted_pdf)
-    fitted_pdf *= scaling_factor
+    # Normalize the KDE values to have an area of 1
+    kde_normalized = kde_values / np.sum(kde_values)
 
-    # Clip the fitted distribution to ensure values are within [0, 1]
-    fitted_pdf = np.clip(fitted_pdf, 0, 1)
+    # Plot the fitted binomial distribution
+    ax.plot(x, kde_normalized * 2, color='red', label='Fitted Binomial Distribution')
 
-    # Plot the fitted normal distribution
-    ax.plot(x, fitted_pdf, color='red',
-            label=f'Fitted Normal Distribution\nEquation: Normal({mu:.3g}, {std:.3g})')
+    # Calculate the empirical CDF of the filtered data
+    ecdf = ECDF(filtered_data)
 
     # Calculate the Kolmogorov-Smirnov statistic and p-value
-    kstest_stat, kstest_pvalue = kstest(filtered_data, 'norm', args=(mu, std))
+    kstest_stat, kstest_pvalue = kstest(filtered_data, ecdf)
 
-    ax.set_xlabel('Success Rate \n (10-fold Increase in Potency from Parent with Same B-M Scaffold)')
+    ax.set_xlabel('Success Rate')
     ax.set_ylabel('Normalized Frequency')
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     plt.suptitle(subtitle)
-    plt.title('Distribution of Success Rates for Analogs within ChEMBLE for Single Protein Targets')
+    plt.title('Distribution of Success Rates for Analogs (All Standard Types)')
 
-    # Print outlier information
-    if len(outliers) > 0:
-        outlier_info = f"Outliers ({len(outliers)}): {', '.join(outliers.round(3).astype(str))}"
-        print(outlier_info)
+    n = len(filtered_data)
+    p = np.mean(filtered_data)
+    binomial_params = f'n = {n}, p = {p:.3f}'
+    legend_text = f'Goodness-of-Fit\nKS Statistic: {kstest_stat:.3g}\np-value: {kstest_pvalue:.3g}\n{binomial_params}'
 
-    ax.legend(loc='best', title=f'Goodness-of-Fit\nKS Statistic: {kstest_stat:.3g}\np-value: {kstest_pvalue:.3g}')
+    ax.legend(loc='best', title=legend_text)
+
+    # Show the plot in fullscreen mode
+    plt.figure(figsize=(20, 12))
+    mng = plt.get_current_fig_manager()
+    mng.window.state('zoomed')
+    plt.show()
     plt.show()
 
     print(df)
 
 if __name__ == '__main__':
     main()
+
