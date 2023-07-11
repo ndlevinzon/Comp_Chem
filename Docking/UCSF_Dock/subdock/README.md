@@ -1,6 +1,6 @@
 Important note- although DOCK 3.8 is in the header of this article, SUBDOCK is perfectly capable of running DOCK 3.7 workloads, though some features of DOCK 3.8 will not be taken advantage of.
 
-#Installing#
+# Installing
 ```
 git clone https://github.com/docking-org/SUBDOCK.git</nowiki>
 ```
