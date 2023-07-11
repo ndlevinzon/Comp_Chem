@@ -43,7 +43,7 @@ Learning by example is best, so let's imagine the following (fake) rotomer set f
 ```
 
 Let us say the C atom lies at (0, 0). A somewhat abbreviated db2 for the set would look like this:
-
+```
 M fake
 A 1 O
 A 2 C
@@ -63,3 +63,4 @@ S 1 1 2 0 0 +0.000 +0.000
 S 1 2 1 2
 S 2 1 2 0 0 +0.000 +0.000
 S 1 2 1 3
+```
