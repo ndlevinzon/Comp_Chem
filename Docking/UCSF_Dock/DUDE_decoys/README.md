@@ -15,6 +15,7 @@ References:
 [1] Huang N, Shoichet BK, Irwin JJ. Benchmarking sets for molecular docking. J Med Chem. 2006 Nov 16; 49(23):6789-801.
 [2] Marcel L. Verdonk*, Valerio Berdini, Michael J. Hartshorn, Wijnand T. M. Mooij, Christopher W. Murray, Richard D. Taylor, and Paul Watson. J. Chem. Inf. Comput. Sci., 2004, 44 (3), pp 793–806.
 ``
+
 # LogAUC
 LogAUC is a metric to evaluate virtual screening performance that has many of the same advantages as area under the curve (AUC), but is based on a plot where the x-axis is semilog in order to focus on early enrichment.
 ## Motivation
