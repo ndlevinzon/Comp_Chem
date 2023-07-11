@@ -35,14 +35,14 @@ Generate 4 subdirectories:
 SMILES files must be of the format (somesmiles somename).
 Copy the database preparation scripts:
 ```
-(<tt>a1*.py-c3*.py</tt>) to <tt>1_SOMENAME2SDF</tt>.
+a1*.py-c3*.py to 1_SOMENAME2SDF.
 ```
 
 ##### HEI generation
 Broadly speaking, the generation procedure involves three steps:
-1. Conversion of the input .mol2 or .sdf files to [http://www.daylight.com/smiles/ SMILES] and then isomeric SMILES.
+1. Conversion of the input .mol2 or .sdf files to SMILES and then isomeric SMILES.
 2. Conversion ("reaction") of the appropriate group(s) in each molecule to form the HEI.
-3. Generation of multiple protonation states, 3D-structures and partial charges for each HEI, resulting in .db files that can be fed to [[DOCK]].
+3. Generation of multiple protonation states, 3D-structures and partial charges for each HEI, resulting in .db files that can be fed to UCSF DOCK.
 
 The scripts for each step are prefixed with the letter 'a' (step 1), 'b' (step 2), and 'c' (first part of step 3), respectively. Within each letter, the scripts are enumerated consecutively.
 * every script takes a list of SMILES as input and outputs a list of SMILES (except for the b7 and b8 scripts, which output .sdf files), prefixed with the sequential number of the script.
@@ -53,7 +53,7 @@ The scripts for each step are prefixed with the letter 'a' (step 1), 'b' (step 2
 * c3_sdf2mol2_mysql_names.py has to be run on four files: the LN and LP files coming out of c2_ionizer_min.py and the sdf files resulting from the b7 and b8 scripts.
 * 
 ##### a Scripts
-
+```
  a1_create_sdf_from_fold.py folder(unpacked from KEGG-website)
  a2_corina.py molfile.smi
 <tt>a2_corina.py</tt> can be started with either <tt>.smi</tt>, <tt>.ism</tt> or <tt>.sdf</tt> files.
@@ -61,9 +61,9 @@ The scripts for each step are prefixed with the letter 'a' (step 1), 'b' (step 2
  a3.1_sdf2ism_filter.py molfile.sdf 
  a3.2_size_cutoff_filter.py molfile.smi
  a4_rm_doubles.py molfile.smi
-
+```
 ##### b Scripts
-
+```
  b1_rxn_carbonyl.py molfile.smi
  b1_rxn_lactone.pk.py molfile.smi
  b2.1_rxn_aromatic_cleav.py molfile.smi
@@ -88,82 +88,106 @@ The scripts for each step are prefixed with the letter 'a' (step 1), 'b' (step 2
  b8.4_thio_parts_connect_2.py file-identifier(e.g. _mol_32007)
  b8.5_thio_ionizer.py file-identifier(e.g. _mol_32007)
  b9_remove_doubles.py start-file-pattern end-file-pattern
-
+```
 ##### c Scripts
-
+```
  c1_corina.py start-file-pattern end-file-pattern
  c2_ionizer_min.py start-file-pattern end-file-pattern
  c3_sdf2mol2_mysql_names.py sdf-file(from corina+ionizer) suffix(for Folders after ring)
  c3_sdf2mol2_mysql_names_remove.py filename_containing_mol2_filenames(zipped does not hurt)
-
+```
 ##### Running Omega
-*''Be careful! This script needs access to a mysql database &ndash; make sure to set the appropriate values that allow you access in the script.''
-*change to <tt>2_OMEGA</tt>.
-*required files:
-**torlib_1205.txt
-**omega_03.2_3_2.param
-**omega_07.2_3_2.param
-**om2_chunks_on_tmp.py ''or'' om2_chunks_on_scratch.py
-*commandline: 
+* Be careful! This script needs access to a mysql database &ndash; make sure to set the appropriate values that allow you access in the script.
+* change to 2_OMEGA.
+* required files:
+** torlib_1205.txt
+** omega_03.2_3_2.param
+** omega_07.2_3_2.param
+** om2_chunks_on_tmp.py ''or'' om2_chunks_on_scratch.py
+*commandline:
+```
  om2_chunks_on_tmp.py MOLS_SUBDIR_1 MOLS_SUBDIR_2 MOL_RAID MAXMOL
+```
 *alternative commandline if you want to run on the cluster:
+```
  om2_chunks_on_scratch.py MOLS_SUBDIR_1 MOLS_SUBDIR_2 MOL_RAID MAXMOL
-*the individual arguments will be connected to form the path to the mol2-files generated in step 3:<br><tt>/raid[MOL_RAID]/people/kolb/DB4/[MOLS_SUBDIR_2]/MOLS/[MOLS_SUBDIR_1]</tt>
-*<tt>MAXMOL</tt> gives the maximum number of molecules which are processed in one chunk. It is advisable to kill the job between the processing of two chunks.
+```
+* the individual arguments will be connected to form the path to the mol2-files generated in step 3:
+```
+/raid[MOL_RAID]/people/kolb/DB4/[MOLS_SUBDIR_2]/MOLS/[MOLS_SUBDIR_1]
+```
+* MAXMOL gives the maximum number of molecules which are processed in one chunk. It is advisable to kill the job between the processing of two chunks.
 
 ##### Running AMSOL
-*''Be careful! This script needs access to a mysql database &ndash; make sure to set the appropriate values that allow you access in the script.''
-*change to <tt>3_AMSOL</tt>
-*required files:
-**amsol_limit.py
-**amsol_functions.py
-**amsol.py
-**am_chunks_on_tmp.py ''or'' am_chunks_on_scratch.py
-*commandline: 
+* Be careful! This script needs access to a mysql database &ndash; make sure to set the appropriate values that allow you access in the script.
+* change to 3_AMSOL
+* required files:
+** amsol_limit.py
+** amsol_functions.py
+** amsol.py
+** am_chunks_on_tmp.py ''or'' am_chunks_on_scratch.py
+*commandline:
+```
  am_chunks_on_tmp.py MOLS_SUBDIR_1 MOL_RAID MOLS_SUBDIR_2
+```
 *alternative commandline if you want to run on the cluster:
+```
  am_chunks_on_scratch.py MOLS_SUBDIR_1 MOL_RAID MOLS_SUBDIR_2
-*the individual arguments will be connected to form the path to the mol2-files generated in step 3:<br><tt>/raid[MOL_RAID]/people/kolb/DB[MOLS_SUBDIR_2]/2_OMEGA/[MOLS_SUBDIR_1]</tt>
-*the script will call <tt>amsol_limit.py</tt>, so make sure that this file is in your directory.
+```
+*the individual arguments will be connected to form the path to the mol2-files generated in step 3: 
+```
+/raid[MOL_RAID]/people/kolb/DB[MOLS_SUBDIR_2]/2_OMEGA/[MOLS_SUBDIR_1]
+```
+* the script will call amsol_limit.py, so make sure that this file is in your directory.
 
 ##### Running Mol2DB
 
-*change to <tt>4_MOL2DB</tt>.
-*create a subfolder for every subpart of the database, i.e., <tt>RING_MORE_KEGG_HEI/OH_LN</tt>,<tt>RING_MORE_KEGG_HEI/OH_LP</tt>, a.s.o.
-*required files in <tt>4_MOL2DB</tt>:
-**inhier_col
-**mol2db_limit.csh
-**lettercode.txt (a file specifying a single letter for each subdirectory)
-*run the appropriate script directly in the subfolder: <tt>mrm_3_limit.py</tt> for molecules with multiple rings, <tt>mro_5.py</tt> for molecules with one ring, and <tt>mrn_1s.py</tt> for molecules with no rings.
-*in each script, make sure that the maximum number of molecules per <tt>.db</tt> file is set to not more than 1000.
-*keep in mind that the <tt>.mol2</tt> file read by <tt>mol2db</tt> must contain exactly 6 lines between <tt>@<TRIPOS>MOLECULE</tt> and <tt>@<TRIPOS>ATOM</tt>
+* change to 4_MOL2DB
+* create a subfolder for every subpart of the database, i.e.,
+```
+RING_MORE_KEGG_HEI/OH_LN</tt>,<tt>RING_MORE_KEGG_HEI/OH_LP
+```
+* required files in 4_MOL2DB:
+** inhier_col
+** mol2db_limit.csh
+** lettercode.txt (a file specifying a single letter for each subdirectory)
+* run the appropriate script directly in the subfolder mrm_3_limit.py for molecules with multiple rings, mro_5.py for molecules with one ring, and mrn_1s.py for molecules with no rings.
+* in each script, make sure that the maximum number of molecules per .db file is set to not more than 1000.
+*keep in mind that the .mol2 file read by mol2db must contain exactly 6 lines between @<TRIPOS>MOLECULE and @<TRIPOS>ATOM
 
 ##### Example: running mrm_3_limit.py
 
 *commandline:
- mrm_3_limit.py MOL_RAID DB_VERSION MOLS_SUBDIR JOB_ID OMEGA_PATH AMSOL_PATH CHECK WRITE_BROKEN
-*The individual arguments and the <tt>pwd</tt> will be connected to form the path to the mol2-files generated in step 2:<br>
-<tt>/raid[MOL_RAID]/people/kolb/DB[DB_VERSION]/[MOLS_SUBDIR]/MOLS/[obtained from pwd: penultimate dir]/[obtained from pwd: last dir]</tt>.
-*<tt>CHECK</tt> gives the frequency of the check whether a molecule has already been processed or not: '0' &rarr; no check; '1' &rarr; check at the beginning of every job; '2' &rarr; check before processing each molecule.
-*in case the script stops after just one molecule, do the following:
-*check that the file <tt>.labels[JOB_ID].txt</tt> exists.
-*create a file <tt>.dbnums[JOB_ID].txt</tt> and write something like "101 0" to it. The first number will be the starting number for the enumeration of the <tt>.db</tt> files, while the second is the current number of molecules already in that <tt>.db</tt> file.
-*delete everything but the header from the <tt>.db</tt> file.
-*start <tt>mrm_3_limit.py</tt> again.
+```
+mrm_3_limit.py MOL_RAID DB_VERSION MOLS_SUBDIR JOB_ID OMEGA_PATH AMSOL_PATH CHECK WRITE_BROKEN
+```
+* The individual arguments and the <tt>pwd</tt> will be connected to form the path to the mol2-files generated in step 2:
+```
+/raid[MOL_RAID]/people/kolb/DB[DB_VERSION]/[MOLS_SUBDIR]/MOLS/[obtained from pwd: penultimate dir]/[obtained from pwd: last dir]
+```
+* CHECK gives the frequency of the check whether a molecule has already been processed or not: '0' &rarr; no check; '1' &rarr; check at the beginning of every job; '2' &rarr; check before processing each molecule.
+* in case the script stops after just one molecule, do the following:
+** check that the file .labels[JOB_ID].txt exists.
+** create a file .dbnums[JOB_ID].txt and write something like "101 0" to it. The first number will be the starting number for the enumeration of the .db files, while the second is the current number of molecules already in that .db file.
+** delete everything but the header from the <tt>.db</tt> file.
+** start <tt>mrm_3_limit.py</tt> again.
 
 ##### Inserting the newly generated molecules into a mysql database
 
 This step is essential to preserve knowledge about the correspondence between the original database name of a molecule, its HEI form, protonation states and conformations and the final name given by mol2db (of the form A00000000 [one letter + eight digits]).
-*required files:
-**mysql_insert_db6.py
-*this also requires you to generate a mysql database of the proper format, best done with mysql_create_table_db5.pk.py
-*commandline:
- mysql_insert_db6.py MOLS_SUBDIR MYSQL_DB MOL2_SUBDIR DB_SUBDIR MYSQL_TABLE DB_VERSION MOL_RAID TAG
-*the individual arguments will be connected to form the path to the .mol2 and files as follows
-<tt>/raid[MOL_RAID]/people/kolb/DB[DB_VERSION]/[MOLS_SUBDIR]/MOLS/MOL2_SUBDIR</tt>
-*the .db files are expected in
-<tt>./DB_SUBDIR</tt>
-*<tt>TAG</tt> is optional and is the name with which the molecule names start.
+* required files:
+** mysql_insert_db6.py
+* this also requires you to generate a mysql database of the proper format, best done with mysql_create_table_db5.pk.py
+* commandline:
+ ```
+mysql_insert_db6.py MOLS_SUBDIR MYSQL_DB MOL2_SUBDIR DB_SUBDIR MYSQL_TABLE DB_VERSION MOL_RAID TAG
+```
+*the individual arguments will be connected to form the path to the .mol2 and files as follows:
+```
+/raid[MOL_RAID]/people/kolb/DB[DB_VERSION]/[MOLS_SUBDIR]/MOLS/MOL2_SUBDIR
+```
+*the .db files are expected in ./DB_SUBDIR
+*TAG is optional and is the name with which the molecule names start.
 
 ### Modifying the PDB file
  
