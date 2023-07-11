@@ -76,11 +76,11 @@ The number of jobs dispatched by SUBDOCK is equal to ceil(N / BATCH_SIZE), where
 
 # Restartability
 
-'''ONLY APPLICABLE FOR DOCK 3.8+!'''
+ONLY APPLICABLE FOR DOCK 3.8+!
 
 Restartability means that we can impose arbitrary time limits on how long our jobs can run *without* losing our progress. Time limits can be as large or as small as we want them to be, even as little as a few minutes per job! This flexibility lets docking jobs efficiently fill in the gaps between longer-running jobs on the same ecosystem, thus they will be preferentially treated by whichever system is in charge of scheduling.
 
-#How to use for your Job Platform#
+# How to use for your Job Platform
 
 On SLURM, runtime can be defined with the "--time" argument, e.g:
 
@@ -135,7 +135,8 @@ You can select a db2 database subset via cartblanche22.docking.org- for wget-abl
 find $PWD -type f -name '*.db2.tgz' > sdi.in
 ```
 
-4. Export the parameters we just prepared as environment variables. ** You need a DOCK executable! This can be found via our download server if you have a license, otherwise lab members can directly pull https://github.com/docking-org/dock3.git. On BKS cluster, some curated executables have been prepared with labels @ /nfs/soft/dock/versions/dock38/executables. DOCK 3.7 executables may be found here as well!
+4. Export the parameters we just prepared as environment variables.
+* You need a DOCK executable! This can be found via our download server if you have a license, otherwise lab members can directly pull https://github.com/docking-org/dock3.git. On BKS cluster, some curated executables have been prepared with labels @ /nfs/soft/dock/versions/dock38/executables. DOCK 3.7 executables may be found here as well!
 
 ```
 export INPUT_SOURCE=$PWD/sdi.in
@@ -154,8 +155,9 @@ export USE_PARALLEL=true|...
 Any value other than exactly "true" will be interpreted as false.
 
 6a. Run docking!
- <nowiki>
+```
 bash ~/SUBDOCK/subdock.bash</nowiki>
+```
 
 6b. You can also use command line arguments instead of environment export, if desired. These can be mixed and matched.
 ```
@@ -167,27 +169,31 @@ bash ~/SUBDOCK/subdock.bash --input-source=$PWD/sdi.in --export-dest=$PWD/output
 
 ## Mixing DOCK 3.7 and DOCK 3.8 - known problems
 
-'''Headline: Though SUBDOCK is compatible with DOCK 3.7, and will allow docking of ligands built for 3.8 in 3.7, it is NOT RECOMMENDED to do this without using a specially prepared 3.7 executable!'''
+* Though SUBDOCK is compatible with DOCK 3.7, and will allow docking of ligands built for 3.8 in 3.7, it is NOT RECOMMENDED to do this without using a specially prepared 3.7 executable!
 
 If you're running DOCK 3.8 against recently built ligands, you may encounter error messages that look like this:
- <nowiki>       1      2 bonds with error
-Error. newlist is not big enough</nowiki>
+```
+1      2 bonds with error
+Error. newlist is not big enough
+```
 
 Or worse, like this:
- <nowiki> Warning. tempconf = 0
-         1597 ->            0 ->            0</nowiki>
+```
+Warning. tempconf = 0
+         1597 ->            0 ->            0
+```
 
 The latter error messages have the potential to cause some serious damage, as they are emitted very frequently & may consume excessive disk space. SUBDOCK will check for these messages periodically during DOCK's runtime & kill the process if they are found.
 
-If you are on 3.8 and are encountering these messages still, use the dock38_nogist executable described in [[How_to_install_DOCK_3.8#Prebuilt_Executable]]. This version voids the code related to the GIST scoring function, which is responsible for these errors.
+If you are on 3.8 and are encountering these messages still, use the dock38_nogist executable. This version voids the code related to the GIST scoring function, which is responsible for these errors.
 
 If you are using 3.7 still, it is possible to prepare a version that keeps everything the same, except without the dangerous "tempconf" message.
 
-== SUBDOCK help splash - all argument descriptions & defaults ==
- <nowiki>
+## SUBDOCK help splash - all argument descriptions & defaults
+
 [user@machine SUBDOCK]$ ./subdock.bash --help
 SUBDOCK! Run docking workloads via job controller of your choice
-# Required Arguments
+### Required Arguments
 expected env arg: EXPORT_DEST, --export-dest
 arg description: nfs output destination for OUTDOCK and test.mol2.gz files
 
@@ -254,6 +260,7 @@ defaulting to /scratch
 optional env arg missing: LONGCACHE, --longcache
 arg description: longer term storage for files shared between jobs
 defaulting to /scratch
+
 ## Miscellaneous
 optional env arg missing: SUBMIT_WAIT_TIME, --submit-wait-time
 arg description: how many seconds to wait before submitting
