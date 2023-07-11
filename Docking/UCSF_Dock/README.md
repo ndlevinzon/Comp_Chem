@@ -34,21 +34,21 @@ Items which are prefixed with 'AH' are relevant for docking [[HEI]]s to amidohyd
 
 ### Running Chemgrid
    
-*run <tt>chemgrid</tt> and check <tt>OUTPARM</tt> for the correct van der Waals parameters of all residues.  
-*grep for <tt>0.000</tt>  in <tt>PDBPARM</tt>: if any atom has this value in the 3<sup>rd</sup> and 4<sup>th</sup> column, it has not been recognized by <tt>chemgrid</tt>  (because it is not listed in <tt>prot.table.ambcrg.ambH</tt>) and is thus ''ignored'' in the van der Waals-maps. There will be no other errors, the docking will finish showing some "bumping" ligands which have extremely favorable energies (&le; -200).
-*Another sign of a problem with atomic radii are any 'WARNING's issued in OUTPARM
-*if one has to run <tt>chemgrid</tt>  again, first remove <tt>PDBPARM OUTPARM OUTCHEM</tt> and <tt>chem.*</tt>.
+* run <tt>chemgrid</tt> and check <tt>OUTPARM</tt> for the correct van der Waals parameters of all residues.  
+* grep for <tt>0.000</tt>  in <tt>PDBPARM</tt>: if any atom has this value in the 3<sup>rd</sup> and 4<sup>th</sup> column, it has not been recognized by <tt>chemgrid</tt>  (because it is not listed in <tt>prot.table.ambcrg.ambH</tt>) and is thus ''ignored'' in the van der Waals-maps. There will be no other errors, the docking will finish showing some "bumping" ligands which have extremely favorable energies (&le; -200).
+* Another sign of a problem with atomic radii are any 'WARNING's issued in OUTPARM
+* if one has to run <tt>chemgrid</tt>  again, first remove <tt>PDBPARM OUTPARM OUTCHEM</tt> and <tt>chem.*</tt>.
 
 ### Tarting the protein
    
-*cp <tt>rec.crg</tt> to <tt>rec+sph.crg</tt> and continue with the latter file.
+* cp <tt>rec.crg</tt> to <tt>rec+sph.crg</tt> and continue with the latter file.
 * tarted residues can be found in <tt>$DOCK_BASE/scripts/grids</tt>, they are the files with the extension <tt>prot2</tt>.
 * add the relevant resides to the bottom of your <tt>prot.table.ambcrg.ambH</tt> file, being very precise to match the current formatting
 * generate the new <tt>amb.crg.oxt</tt> from the edited <tt>prot.table.ambcrg.ambH</tt> using:<br><tt>$mud/prot2crg.py < prot.table.ambcrg.ambH > amb.crg.oxt</tt>
-*AH: select the appropriate version of <tt>amb.crg.oxt</tt> depending on the subtype. Files are called <tt>amb.crg.oxt.N</tt>, where <tt>N</tt> can be <tt>I, III</tt> or <tt>VI</tt>.  
-*AH: edit the residues in the binding site (i.e., all residues complexing the metal ions in the binding site), so that their names conform to the names of the modified residues in <tt>amb.crg.oxt.N</tt>  
-*optionally tart the residues that are in contact with a crystallographic ligand, if any.  
-*AH: check that ZA and ZB, respectively (left-aligned in the atom column), have corresponding entries in <tt>amb.crg.oxt.N</tt>  and <tt>vdw.siz</tt>.
+* AH: select the appropriate version of <tt>amb.crg.oxt</tt> depending on the subtype. Files are called <tt>amb.crg.oxt.N</tt>, where <tt>N</tt> can be <tt>I, III</tt> or <tt>VI</tt>.  
+* AH: edit the residues in the binding site (i.e., all residues complexing the metal ions in the binding site), so that their names conform to the names of the modified residues in <tt>amb.crg.oxt.N</tt>  
+* optionally tart the residues that are in contact with a crystallographic ligand, if any.  
+* AH: check that ZA and ZB, respectively (left-aligned in the atom column), have corresponding entries in <tt>amb.crg.oxt.N</tt>  and <tt>vdw.siz</tt>.
 
 ### Modifying the Delphi spheres
    
@@ -60,13 +60,13 @@ Items which are prefixed with 'AH' are relevant for docking [[HEI]]s to amidohyd
 
 ### Modifying the Matching spheres
 
-*load <tt>match2.sph.pdb</tt> for sparse initial spheres or <tt>match3.sph.pdb</tt> denser spheres.
-*If you selected <tt>.useligsph</tt> be careful not to move any spheres based on the ligand atoms.  
-*(AH:) put at least one sphere between the metals and increase the sampling in the region around the metal ions by putting some spheres there.
-*a good number for matching spheres is 50-60.  
-*run <tt>pdbtosph matchN.sph.pdb mysph.sph</tt> to generate the files that will be read by [[DOCK]].   
-*if color matching is desired, run <tt>colorspheres.pl sph/match2.sph</tt> in the parent directory of the docking run (i.e., <tt>..</tt> to <tt>sph</tt> ) to put some color on your spheres.  
-*run <tt>cat $mud/header.sph match2.sph</tt> .
+* load <tt>match2.sph.pdb</tt> for sparse initial spheres or <tt>match3.sph.pdb</tt> denser spheres.
+* If you selected <tt>.useligsph</tt> be careful not to move any spheres based on the ligand atoms.  
+* (AH:) put at least one sphere between the metals and increase the sampling in the region around the metal ions by putting some spheres there.
+* a good number for matching spheres is 50-60.  
+* run <tt>pdbtosph matchN.sph.pdb mysph.sph</tt> to generate the files that will be read by [[DOCK]].   
+* if color matching is desired, run <tt>colorspheres.pl sph/match2.sph</tt> in the parent directory of the docking run (i.e., <tt>..</tt> to <tt>sph</tt> ) to put some color on your spheres.  
+* run <tt>cat $mud/header.sph match2.sph</tt> .
 
 ### Running Delphi
 
@@ -78,5 +78,5 @@ And the Make file will do the work.
 
 ### Running newsolv.sev
    
-*if you changed rec.crg or the box above, you need to run newsolv.sev   
-*check that all atoms are present in <tt>rec.crg</tt> and run <tt>newsolv.sev</tt> .
+* if you changed rec.crg or the box above, you need to run newsolv.sev   
+* check that all atoms are present in <tt>rec.crg</tt> and run <tt>newsolv.sev</tt> .
