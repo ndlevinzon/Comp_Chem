@@ -91,6 +91,9 @@ def main():
 
     ax.legend(loc='best', title=legend_text)
 
+    # Save the histogram as a high-resolution PNG file
+    plt.savefig('/mnt/nfs/home/nlevinzon/chembl/total/total_histogram.png', dpi=300)
+
     # Show the plot in fullscreen mode
     plt.figure(figsize=(20, 12))
     mng = plt.get_current_fig_manager()
@@ -102,4 +105,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
