@@ -80,3 +80,86 @@ And the Make file will do the work.
    
 * if you changed rec.crg or the box above, you need to run newsolv.sev   
 * check that all atoms are present in <tt>rec.crg</tt> and run <tt>newsolv.sev</tt> .
+
+## Preparing your Ligand
+
+### Automatic way, starting from SMILES
+
+This way, you will make use of John's automatic scripts for database
+preparation and actually upload new molecules to a special section of
+[http://zinc.docking.org/ ZINC].
+   
+* it is advisable to create a special subdirectory, since many new    files will be generated.  
+* the file containing the [http://www.daylight.com/smiles/ SMILES] strings should contain a string    followed by an identifier on each line.  
+* OPTIONAL: run <tt>convert.py --i=yourname.smi --o=yourname.ism</tt> . This will  convert your SMILES to ''isomeric'' SMILES.
+* run <tt>dbgen.csh yourname.smi</tt>.  
+** Note that the dbgen.csh does not work for more that 1000 molecules.
+** Brake up your molecules into chunks of 1000 and run dbgen on each chunk.
+** Clean up your directory afterwards. dbgen.csh generates a lot of files that you do not need if it ran correctly.  
+* you should obtain a file <tt>somename.db.gz</tt> .
+
+#### optional
+To increase the number of molecules that are written out for the database generation, copy the file $DOCK_BASE/data/omega.parm into the directory that dbgen.csh is going to be run in.
+*At the end of the omega.parm file you will see a section called "Torsion Driving Parameters", here you will find three variables that can be changed.
+***SetMaxConfs(600)   #set to higher numbers ie. 1000
+***SetRMSThreshold(0.80)  #set to lower numbers ie. 0.50
+***SetEnergyWindow(12.5)  #can be changed but this can often generate broken molecules
+*WARNING this should only be done if generating conformations for a small set of compounds!!!
+
+### Manual way
+
+===Isolating the ligand as <tt>.mol2</tt>  file===
+   
+*extract the ligand structure from the <tt>.pdb</tt>  file.  
+*assign hydrogens.  
+*assign all atom ([http://www.tripos.com/mol2/atom_types.html Sybyl/TAFF]) and bond types.  
+*save it as <tt>ligandname.mol2</tt>  file.  
+
+#### Running <tt>omega</tt>
+   
+* run [http://www.eyesopen.com/products/applications/omega.html OMEGA], but don't ask me how to do that yet.
+
+#### Running amsol
+
+*find more information about amsol [http://comp.chem.umn.edu/amsol/ on its homepage].  
+*<tt>mkdir ./amsol2</tt>   
+*Use file2file.py to get the right formal charge to feed to AMSOL. It is also important to change the name, otherwise the original <tt>.mol2</tt> file will be overwritten!
+<tt>file2file.py -g ligandname.mol2 ./amsol2/someothername.mol2</tt>      
+*edit <tt>./amsol2/someothername.mol2</tt> :     
+*
+*delete all lines prior to <tt>@<TRIPOS>MOLECULE</tt>   
+*
+*change line 2 (molecule name) to something of the format <tt>ABCD12345678</tt> (four capital letters followed by eight numbers).  
+*
+*line 3 should be <tt>n<sub>atoms</sub> n<sub>bonds</sub> 0 0 0</tt>
+*
+*the <tt>@<TRIPOS>MOLECULE</tt>  section must consist of exactly '''5''' lines (adjust by adding/deleting blanks).  
+*
+*remove all sections after the <tt>@<TRIPOS>BOND</tt>  section.
+*
+*delete the blank lines between the <tt>ATOM</tt>  and <tt>BOND</tt>     sections, if there are any.    
+*run <tt>RunAMSOL3.csh WAIT</tt>   
+*the output <tt>someothername.solv</tt>  file will contain the following:
+{| style="text-align: center; border:1px solid #aaa; margin: 1em 1em 1em 0; background: #f9f9f9; border-collapse: collapse;" cellpadding="5" cellspacing="0" 
+|+ '''AMSOL output'''
+|-
+! style="border:1px #aaa solid; padding: 0.2em;" | line #1
+| style="border:1px #aaa solid; padding: 0.2em;" | molname || style="border:1px #aaa solid; padding: 0.2em;" | <math>n_{atoms}</math> || style="border:1px #aaa solid; padding: 0.2em;" | charge || style="border:1px #aaa solid; padding: 0.2em;" | pol_solv || style="border:1px #aaa solid; padding: 0.2em;" | ? || style="border:1px #aaa solid; padding: 0.2em;" | apol_solv || style="border:1px #aaa solid; padding: 0.2em;" | total_solv
+|-
+! style="border:1px #aaa solid; padding: 0.2em;" | other lines 
+| style="border:1px #aaa solid; padding: 0.2em;" | charge || style="border:1px #aaa solid; padding: 0.2em;" | pol_solv || style="border:1px #aaa solid; padding: 0.2em;" | ? || style="border:1px #aaa solid; padding: 0.2em;" | apol_solv || style="border:1px #aaa solid; padding: 0.2em;" | total_solv
+|-
+| style="border:1px #aaa solid; padding: 0.2em;" | ''(per_atom)''
+|}
+
+
+*furthermore, there will be <tt>someothername.nmol2</tt>  file    which contains the correct partial charges.
+
+#### Running <tt>mol2db</tt>
+   
+*edit <tt>someothername.nmol2</tt>  so that the <tt>@<TRIPOS>MOLECULE</tt> section consists of exactly '''6''' lines.  
+*edit the <tt>inhier</tt>  file so that the 'mol2_file',    'db_file' and 'solvation_table' entries are correct.  
+*run <tt>mol2db inhier</tt>   
+*add the preamble at the top of the file.  
+*<tt>gzip</tt>  the resulting file so that it can be used by <tt>DOCK</tt> .
+
