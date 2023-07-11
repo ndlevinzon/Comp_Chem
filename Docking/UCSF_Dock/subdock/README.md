@@ -114,39 +114,44 @@ Be careful not to overlap your submissions- there are no guardrails in place to 
 This example assumes you have access to a DOCK executable and an installed scheduling system (SGE/SLURM/Parallel), but nothing else.
 
 1. Source subdock code from github
- <nowiki>
+ 
+```
 git clone https://github.com/docking-org/SUBDOCK.git</nowiki>
+```
 
-2. Fetch dockfiles from DUDE-Z- we will use DRD4 for this example.
- <nowiki>
-# note- SUBDOCK automatically detects your DOCK version & corrects the INDOCK header accordingly
+2. Fetch dockfiles from DUDE-Z- we will use DRD4 for this example. **note- SUBDOCK automatically detects your DOCK version & corrects the INDOCK header accordingly
+```
 wget -r --reject="index.html*" -nH --cut-dirs=2 -l1 --no-parent https://dudez.docking.org/DOCKING_GRIDS_AND_POSES/DRD4/dockfiles/</nowiki>
-
+```
 3a. Get db2 database subset sample via ZINC-22. Example provided below:
- <nowiki>
+```
 wget http://files.docking.org/zinc22/zinc-22l/H17/H17P050/a/H17P050-N-laa.db2.tgz
 wget http://files.docking.org/zinc22/zinc-22l/H17/H17P050/a/H17P050-N-lab.db2.tgz
 wget http://files.docking.org/zinc22/zinc-22l/H17/H17P050/a/H17P050-N-lac.db2.tgz</nowiki>
+```
 
 You can select a db2 database subset via cartblanche22.docking.org- for wget-able files, choose the DOCK37 (*.db2.tgz) format, with URL download type. Multiple download types are supported, for example if you are on Wynton you can download Wynton file paths- removing the need to download the files yourself.
 
 3b. If you downloaded the db2.tgz files yourself, create an sdi.in file from your database subset, which will serve as a list of files to evaluate. For example:
- <nowiki>
-find $PWD -type f -name '*.db2.tgz' > sdi.in</nowiki>
+```
+find $PWD -type f -name '*.db2.tgz' > sdi.in
+```
 
-4. Export the parameters we just prepared as environment variables. '''You need a DOCK executable!''' This can be found via our download server if you have a license, otherwise lab members can directly pull https://github.com/docking-org/dock3.git. On BKS cluster, some curated executables have been prepared with labels @ /nfs/soft/dock/versions/dock38/executables. DOCK 3.7 executables may be found here as well!
+4. Export the parameters we just prepared as environment variables. ** You need a DOCK executable! This can be found via our download server if you have a license, otherwise lab members can directly pull https://github.com/docking-org/dock3.git. On BKS cluster, some curated executables have been prepared with labels @ /nfs/soft/dock/versions/dock38/executables. DOCK 3.7 executables may be found here as well!
 
- <nowiki>
+```
 export INPUT_SOURCE=$PWD/sdi.in
 export EXPORT_DEST=$PWD/output
 export DOCKFILES=$PWD/dockfiles
-export DOCKEXEC=/nfs/soft/dock/versions/dock38/executables/dock38_nogist</nowiki>
+export DOCKEXEC=/nfs/soft/dock/versions/dock38/executables/dock38_nogist
+```
 
 5. Choose a platform. You must select only one platform - mixing and matching is not supported.
- <nowiki>
+```
 export USE_SLURM=true|...
 export USE_SGE=true|...
-export USE_PARALLEL=true|...</nowiki>
+export USE_PARALLEL=true|...
+```
 
 Any value other than exactly "true" will be interpreted as false.
 
@@ -155,13 +160,14 @@ Any value other than exactly "true" will be interpreted as false.
 bash ~/SUBDOCK/subdock.bash</nowiki>
 
 6b. You can also use command line arguments instead of environment export, if desired. These can be mixed and matched.
- <nowiki>
+```
 export DOCKEXEC=$PWD/DOCK/ucsfdock/docking/DOCK/dock64
-bash ~/SUBDOCK/subdock.bash --input-source=$PWD/sdi.in --export-dest=$PWD/output --dockfiles=$PWD/dockfiles --use-slurm=true</nowiki>
+bash ~/SUBDOCK/subdock.bash --input-source=$PWD/sdi.in --export-dest=$PWD/output --dockfiles=$PWD/dockfiles --use-slurm=true
+```
 
 7. After executing subdock, it will print out a convenient "superscript" to copy & paste, for any future re-submissions.
 
-== Mixing DOCK 3.7 and DOCK 3.8 - known problems ==
+# Mixing DOCK 3.7 and DOCK 3.8 - known problems
 
 '''Headline: Though SUBDOCK is compatible with DOCK 3.7, and will allow docking of ligands built for 3.8 in 3.7, it is NOT RECOMMENDED to do this without using a specially prepared 3.7 executable!'''
 
@@ -183,7 +189,7 @@ If you are using 3.7 still, it is possible to prepare a version that keeps every
  <nowiki>
 [user@machine SUBDOCK]$ ./subdock.bash --help
 SUBDOCK! Run docking workloads via job controller of your choice
-=================required arguments=================
+# Required arguments
 expected env arg: EXPORT_DEST, --export-dest
 arg description: nfs output destination for OUTDOCK and test.mol2.gz files
 
@@ -196,7 +202,7 @@ arg description: nfs directory containing dock related files and INDOCK configur
 expected env arg: DOCKEXEC, --dockexec
 arg description: nfs path to dock executable
 
-=================job controller settings=================
+# Job controller settings
 optional env arg missing: USE_SLURM, --use-slurm
 arg description: use slurm
 defaulting to false
@@ -221,7 +227,7 @@ optional env arg missing: USE_PARALLEL_ARGS, --use-parallel-args
 arg description: addtl arguments for GNU parallel command
 defaulting to 
 
-=================input settings=================
+# input settings
 optional env arg missing: USE_DB2_TGZ, --use-db2-tgz
 arg description: dock db2.tgz tar files
 defaulting to true
@@ -238,7 +244,7 @@ optional env arg missing: USE_DB2_BATCH_SIZE, --use-db2-batch-size
 arg description: how many db2.gz to evaluate per batch
 defaulting to 100
 
-=================addtl job configuration=================
+# Addtl job configuration
 optional env arg missing: MAX_PARALLEL, --max-parallel
 arg description: max jobs allowed to run in parallel
 defaulting to -1
@@ -250,8 +256,7 @@ defaulting to /scratch
 optional env arg missing: LONGCACHE, --longcache
 arg description: longer term storage for files shared between jobs
 defaulting to /scratch
-
-=================miscellaneous=================
+# Miscellaneous
 optional env arg missing: SUBMIT_WAIT_TIME, --submit-wait-time
 arg description: how many seconds to wait before submitting
 defaulting to 5
