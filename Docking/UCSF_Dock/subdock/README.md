@@ -1,5 +1,3 @@
-Important note- although DOCK 3.8 is in the header of this article, SUBDOCK is perfectly capable of running DOCK 3.7 workloads, though some features of DOCK 3.8 will not be taken advantage of.
-
 # Installing
 ```
 git clone https://github.com/docking-org/SUBDOCK.git</nowiki>
@@ -189,7 +187,7 @@ If you are using 3.7 still, it is possible to prepare a version that keeps every
  <nowiki>
 [user@machine SUBDOCK]$ ./subdock.bash --help
 SUBDOCK! Run docking workloads via job controller of your choice
-# Required arguments
+# Required Arguments
 expected env arg: EXPORT_DEST, --export-dest
 arg description: nfs output destination for OUTDOCK and test.mol2.gz files
 
@@ -202,7 +200,7 @@ arg description: nfs directory containing dock related files and INDOCK configur
 expected env arg: DOCKEXEC, --dockexec
 arg description: nfs path to dock executable
 
-## Job controller settings
+## Job Controller Settings
 optional env arg missing: USE_SLURM, --use-slurm
 arg description: use slurm
 defaulting to false
@@ -227,7 +225,7 @@ optional env arg missing: USE_PARALLEL_ARGS, --use-parallel-args
 arg description: addtl arguments for GNU parallel command
 defaulting to 
 
-## input settings
+## Input Settings
 optional env arg missing: USE_DB2_TGZ, --use-db2-tgz
 arg description: dock db2.tgz tar files
 defaulting to true
@@ -244,7 +242,7 @@ optional env arg missing: USE_DB2_BATCH_SIZE, --use-db2-batch-size
 arg description: how many db2.gz to evaluate per batch
 defaulting to 100
 
-## Addtl job configuration
+## Addtl Job Configuration
 optional env arg missing: MAX_PARALLEL, --max-parallel
 arg description: max jobs allowed to run in parallel
 defaulting to -1
