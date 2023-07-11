@@ -1,6 +1,6 @@
 # Installing
 ```
-git clone https://github.com/docking-org/SUBDOCK.git</nowiki>
+git clone https://github.com/docking-org/SUBDOCK.git
 ```
 IMPORTANT: subdock.bash expects to live in the same directory as rundock.bash!!!
 
