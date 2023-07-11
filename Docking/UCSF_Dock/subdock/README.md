@@ -10,11 +10,11 @@ IMPORTANT: subdock.bash expects to live in the same directory as rundock.bash!!!
 
 * subdock.bash can be called directly from any location- it is not sensitive to the current working directory.
 
-#What's New?#
+# What's New?
 
 Compared to older scripts, SUBDOCK is easier to use, has more features, and is much more flexible!
 
-##December 2022##
+## December 2022
 
 * All jobs platforms (e.g slurm, sge) are supported on the same script
 
@@ -30,7 +30,7 @@ Compared to older scripts, SUBDOCK is easier to use, has more features, and is m
 
 * INDOCK version header is automatically corrected, as are any file paths referenced by INDOCK.
 
-##May 2023##
+## May 2023
 
 * You can provide http(s) URLs to dockable files as your input in lieu of file paths!
 
@@ -38,25 +38,27 @@ Compared to older scripts, SUBDOCK is easier to use, has more features, and is m
 
 * Subdock will automatically detect if your jobs failed- no need to use an extra script to check if your jobs have actually finished or not
 
-#Supported Platforms#
+# Supported Platforms
 
 There are four platforms currently supported:
 
 * SLURM
 * SGE (Sun Grid Engine)
-**note for BKS lab: the SGE queue on gimel does not have python3, your jobs will not work!'''
+** note for BKS lab: the SGE queue on gimel does not have python3, your jobs will not work!
 * GNU Parallel (for local runs- ideal for testing)
 * Charity Engine
 
 One of these platforms must be specified- SLURM is the default. These platforms can be set by the
 
+```
 --use-slurm=true
 --use-sge=true
 --use-parallel=true
 --use-charity=true
+```
 Arguments, respectively
 
-#Using Charity Engine#
+## Using Charity Engine
 
 To use charity engine, you must have access to an executable of the charity engine CLI, as well as GNU parallel.
 
@@ -64,7 +66,7 @@ Additionally, you must provide your charity authentication details in the form o
 
 WIP, more specific instructions to come.
 
-#Supported File Types#
+# Supported File Types
 
 DOCK can be run on individual db2.gz files or db2.tgz tar packages.
 
@@ -74,7 +76,7 @@ Each job dispatched by SUBDOCK will consume BATCH_SIZE files, where BATCH_SIZE i
 
 The number of jobs dispatched by SUBDOCK is equal to ceil(N / BATCH_SIZE), where N is the total number of input files.
 
-#Restartability#
+# Restartability
 
 '''ONLY APPLICABLE FOR DOCK 3.8+!'''
 
@@ -97,7 +99,7 @@ On SGE, the same can be achieved using the s_rt and h_rt parameters, e.g:
 This tells SGE to warn the job 30 seconds prior to the 30 minute hard limit. 
 GNU and SLURM platforms will provide a hard-coded 30 seconds notice, whereas this notice period must be manually defined for SGE jobs.
 
-#How to continue jobs#
+# How to continue jobs
 
 Run subdock.bash again with the same parameters (particularly EXPORT_DEST, INPUT_SOURCE, USE_DB2, USE_DB2_TGZ, USE_DB2_BATCH_SIZE, and USE_DB2_TGZ_BATCH_SIZE) to restart your jobs! If you saved the superscript SUBDOCK spits out on successful submission, you can simply call that. 
 
@@ -107,7 +109,7 @@ Output files are appended with a suffix indicating how many times the docking ta
 
 Be careful not to overlap your submissions- there are no guardrails in place to prevent this from happening if you are not careful.
 
-#Full Example - All Steps#
+# Full Example - All Steps
 
 This example assumes you have access to a DOCK executable and an installed scheduling system (SGE/SLURM/Parallel), but nothing else.
 
