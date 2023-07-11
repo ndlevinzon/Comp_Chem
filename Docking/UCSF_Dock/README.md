@@ -5,7 +5,7 @@ Items which are prefixed with 'AH' are relevant for docking HEIs to amidohydrola
 
 ### HEIs
 
-High-energy intermediate databases in mol2 format can be found at [http://hei.docking.org hei.docking.org].
+High-energy intermediate databases in mol2 format can be found at [http://hei.docking.org].
 
 The files available are:
 
@@ -341,11 +341,77 @@ To increase the number of molecules that are written out for the database genera
 
 *furthermore, there will be <tt>someothername.nmol2</tt>  file    which contains the correct partial charges.
 
-#### Running <tt>mol2db</tt>
+#### Running mol2db
    
 *edit <tt>someothername.nmol2</tt>  so that the <tt>@<TRIPOS>MOLECULE</tt> section consists of exactly '''6''' lines.  
 *edit the <tt>inhier</tt>  file so that the 'mol2_file',    'db_file' and 'solvation_table' entries are correct.  
 *run <tt>mol2db inhier</tt>   
 *add the preamble at the top of the file.  
 *<tt>gzip</tt>  the resulting file so that it can be used by <tt>DOCK</tt> .
+
+## Understanding MakeDOCK
+
+MakeDOCK automates the process of sphere and grid generation for a target.
+
+### MakeDOCK Features
+
+* If you have the MakeDOCK Makefile, you simply type 'make' to generate all the spheres and grids. 
+* All required files and structures will be copied and created for you by MakeDOCK.  
+* Automatically displays non-fatal WARNINGS that occurred during grid generation, which often lead to incorrect docking results.
+* Full dependency resolution means you can change any input or parameter file and type 'make' to generate all files that depend on that change (i.e. tarting or editing spheres). 
+
+### Input Files for MakeDOCK
+
+Create a new directory containing the following input files to MakeDOCK: 
+* rec.pdb: Prepared receptor file
+* xtal-lig.pdb: Ligand specification file
+
+These are required to specify the target for docking. For help preparing these files, see Receptor Preparation and Ligand Preparation.
+
+### How to Use MakeDOCK
+
+In the directory containing rec.pdb and xtal-lig.pdb, do the following to run MakeDOCK.
+```
+ setenv DOCK_BASE ~mysinger/xyz/dockenv
+ source $DOCK_BASE/etc/login
+ cp $DOCK_BASE/scripts/Makefile3 Makefile
+ make
+```
+
+#### Making Changes
+
+Any changes to any file used by MakeDOCK will automatically run all the commands necessary to generate all spheres and grids that depend on that change. For example, tart up a residue in grids/rec+sph.crg and type 'make' to regenerate delphi grids.
+
+#### MakeDOCK Extras
+
+* Once spheres and grids are generated, `make clean` will delete all input and log files, leaving you will the essential output files
+* 'make distclean' will remove all files created by MakeDOCK
+
+=== MakeDOCK as a Learning Tool ===
+
+* Look inside the Makefile. The Makefile begins with variable definition and is then divided into target sections. The target sections have been specifically ordered to roughly follow how sphere and grid generation proceeds. Thus the Makefile can be used to learn exactly how spheres and grids are generated for DOCK.
+
+* Variables are set using 'VARNAME = contents'. They are later referenced using $VARNAME. The general syntax for a target section is 'target: dependencies'. Changes to any of the dependencies cause that target to be made. Targets are made using the rules (lines) in that section. The command 'make' actually runs the 'all:' target. You can specify a different target using 'make target'. 
+
+### Receptor Preparation
+
+To prepare a typical pdb structure for use as the receptor in MakeDOCK, do the following:
+
+* Remove solvent (i.e. crystallographic waters)
+* Remove other non-essential hetero-atoms (everything but perhaps a co-factor essential for ligand binding)
+* Remove the ligand itself
+* Delete all hydrogens
+* Save as rec_original.pdb
+* Run 'paranoia.csh' to clean up the rec_original.pdb file into the final rec.pdb file 
+
+### Ligand Preparation
+
+To prepare the ligand specification, reload the original pdb structure and perform the following steps:
+
+* Delete everything BUT the ligand atoms
+* Save as xtal-lig.pdb
+
+### Submitting Jobs
+
+To learn how to create and run a docking job, see the [[SGE Cluster Docking]] page.
 
