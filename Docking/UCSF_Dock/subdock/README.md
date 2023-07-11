@@ -167,7 +167,7 @@ bash ~/SUBDOCK/subdock.bash --input-source=$PWD/sdi.in --export-dest=$PWD/output
 
 7. After executing subdock, it will print out a convenient "superscript" to copy & paste, for any future re-submissions.
 
-# Mixing DOCK 3.7 and DOCK 3.8 - known problems
+## Mixing DOCK 3.7 and DOCK 3.8 - known problems
 
 '''Headline: Though SUBDOCK is compatible with DOCK 3.7, and will allow docking of ligands built for 3.8 in 3.7, it is NOT RECOMMENDED to do this without using a specially prepared 3.7 executable!'''
 
@@ -202,7 +202,7 @@ arg description: nfs directory containing dock related files and INDOCK configur
 expected env arg: DOCKEXEC, --dockexec
 arg description: nfs path to dock executable
 
-# Job controller settings
+## Job controller settings
 optional env arg missing: USE_SLURM, --use-slurm
 arg description: use slurm
 defaulting to false
@@ -227,7 +227,7 @@ optional env arg missing: USE_PARALLEL_ARGS, --use-parallel-args
 arg description: addtl arguments for GNU parallel command
 defaulting to 
 
-# input settings
+## input settings
 optional env arg missing: USE_DB2_TGZ, --use-db2-tgz
 arg description: dock db2.tgz tar files
 defaulting to true
@@ -244,7 +244,7 @@ optional env arg missing: USE_DB2_BATCH_SIZE, --use-db2-batch-size
 arg description: how many db2.gz to evaluate per batch
 defaulting to 100
 
-# Addtl job configuration
+## Addtl job configuration
 optional env arg missing: MAX_PARALLEL, --max-parallel
 arg description: max jobs allowed to run in parallel
 defaulting to -1
@@ -256,7 +256,7 @@ defaulting to /scratch
 optional env arg missing: LONGCACHE, --longcache
 arg description: longer term storage for files shared between jobs
 defaulting to /scratch
-# Miscellaneous
+## Miscellaneous
 optional env arg missing: SUBMIT_WAIT_TIME, --submit-wait-time
 arg description: how many seconds to wait before submitting
 defaulting to 5
