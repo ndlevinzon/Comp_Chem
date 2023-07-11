@@ -16,7 +16,7 @@ Compared to older scripts, SUBDOCK is easier to use, has more features, and is m
 
 * All jobs platforms (e.g slurm, sge) are supported on the same script
 
-* GNU Parallel is now supported as a jobs platform! Ideal for small-scale local testing. https://www.gnu.org/software/parallel/
+* GNU Parallel is now supported as a jobs platform! Ideal for small-scale local testing. (https://www.gnu.org/software/parallel/)
 
 * Subdock can now be run on both db2.gz individual files & db2.tgz packages. A batch_size can be set for both types, allowing for more flexibility.
 
