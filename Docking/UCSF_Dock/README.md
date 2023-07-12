@@ -145,7 +145,7 @@ mysql_insert_db6.py MOLS_SUBDIR MYSQL_DB MOL2_SUBDIR DB_SUBDIR MYSQL_TABLE DB_VE
    
 * go to <tt>./grids</tt>  and remove the surplus files from this directory (some would cause error messages from the subsequent programs):<br><tt>rm -f PDBPARM chem.* rec+sph.phi solvmap_sev tart.txt OUT*</tt>
 * modify <tt>rec.crg</tt>: 
-* *AH: CYK: put the three missing atoms, delete the surplus hydrogens specific for LYS and rename the carboxylated lysine residue CYK.  
+** AH: CYK: put the three missing atoms, delete the surplus hydrogens specific for LYS and rename the carboxylated lysine residue CYK.  
 ** remove all TER statements that might have been added.  
 ** AH: set the atom names of the metal ions to ZA and ZB and the residue name to ZN.  
 ** take care of disulfide bonds. Remove the thiol hydrogens (if they have been added) and change the residue name from CYS to CYX.  
@@ -219,10 +219,10 @@ This way, you will make use of John's automatic scripts for database preparation
 
 #### optional
 To increase the number of molecules that are written out for the database generation, copy the file $DOCK_BASE/data/omega.parm into the directory that dbgen.csh is going to be run in.
-*At the end of the omega.parm file you will see a section called "Torsion Driving Parameters", here you will find three variables that can be changed.
-*** SetMaxConfs(600)   #set to higher numbers ie. 1000
-*** SetRMSThreshold(0.80)  #set to lower numbers ie. 0.50
-*** SetEnergyWindow(12.5)  #can be changed but this can often generate broken molecules
+* At the end of the omega.parm file you will see a section called "Torsion Driving Parameters", here you will find three variables that can be changed.
+** SetMaxConfs(600)   #set to higher numbers ie. 1000
+** SetRMSThreshold(0.80)  #set to lower numbers ie. 0.50
+** SetEnergyWindow(12.5)  #can be changed but this can often generate broken molecules
 * WARNING this should only be done if generating conformations for a small set of compounds!!!
 
 ### Manual way
@@ -240,25 +240,19 @@ To increase the number of molecules that are written out for the database genera
 
 #### Running amsol
 
-*find more information about amsol [http://comp.chem.umn.edu/amsol/ on its homepage].  
-*<tt>mkdir ./amsol2</tt>   
-*Use file2file.py to get the right formal charge to feed to AMSOL. It is also important to change the name, otherwise the original <tt>.mol2</tt> file will be overwritten!
+* find more information about amsol [http://comp.chem.umn.edu/amsol/ on its homepage].  
+* <tt>mkdir ./amsol2</tt>   
+* Use file2file.py to get the right formal charge to feed to AMSOL. It is also important to change the name, otherwise the original <tt>.mol2</tt> file will be overwritten!
 <tt>file2file.py -g ligandname.mol2 ./amsol2/someothername.mol2</tt>      
-*edit <tt>./amsol2/someothername.mol2</tt> :     
-*
-*delete all lines prior to <tt>@<TRIPOS>MOLECULE</tt>   
-*
-*change line 2 (molecule name) to something of the format <tt>ABCD12345678</tt> (four capital letters followed by eight numbers).  
-*
-*line 3 should be <tt>n<sub>atoms</sub> n<sub>bonds</sub> 0 0 0</tt>
-*
-*the <tt>@<TRIPOS>MOLECULE</tt>  section must consist of exactly '''5''' lines (adjust by adding/deleting blanks).  
-*
-*remove all sections after the <tt>@<TRIPOS>BOND</tt>  section.
-*
-*delete the blank lines between the <tt>ATOM</tt>  and <tt>BOND</tt>     sections, if there are any.    
-*run <tt>RunAMSOL3.csh WAIT</tt>   
-*the output <tt>someothername.solv</tt>  file will contain the following:
+* edit <tt>./amsol2/someothername.mol2</tt> :     
+** delete all lines prior to <tt>@<TRIPOS>MOLECULE</tt>   
+** change line 2 (molecule name) to something of the format <tt>ABCD12345678</tt> (four capital letters followed by eight numbers).  
+** line 3 should be <tt>n<sub>atoms</sub> n<sub>bonds</sub> 0 0 0</tt>
+** the <tt>@<TRIPOS>MOLECULE</tt>  section must consist of exactly '''5''' lines (adjust by adding/deleting blanks).  
+** remove all sections after the <tt>@<TRIPOS>BOND</tt>  section.
+** delete the blank lines between the <tt>ATOM</tt>  and <tt>BOND</tt>     sections, if there are any.    
+** run <tt>RunAMSOL3.csh WAIT</tt>   
+* the output <tt>someothername.solv</tt>  file will contain the following:
 {| style="text-align: center; border:1px solid #aaa; margin: 1em 1em 1em 0; background: #f9f9f9; border-collapse: collapse;" cellpadding="5" cellspacing="0" 
 |+ '''AMSOL output'''
 |-
@@ -276,11 +270,11 @@ To increase the number of molecules that are written out for the database genera
 
 #### Running mol2db
    
-*edit <tt>someothername.nmol2</tt>  so that the <tt>@<TRIPOS>MOLECULE</tt> section consists of exactly '''6''' lines.  
-*edit the <tt>inhier</tt>  file so that the 'mol2_file',    'db_file' and 'solvation_table' entries are correct.  
-*run <tt>mol2db inhier</tt>   
-*add the preamble at the top of the file.  
-*<tt>gzip</tt>  the resulting file so that it can be used by <tt>DOCK</tt> .
+* edit <tt>someothername.nmol2</tt>  so that the <tt>@<TRIPOS>MOLECULE</tt> section consists of exactly '''6''' lines.  
+* edit the <tt>inhier</tt>  file so that the 'mol2_file',    'db_file' and 'solvation_table' entries are correct.  
+* run <tt>mol2db inhier</tt>   
+* add the preamble at the top of the file.  
+* <tt>gzip</tt>  the resulting file so that it can be used by <tt>DOCK</tt> .
 
 ## Understanding MakeDOCK
 
