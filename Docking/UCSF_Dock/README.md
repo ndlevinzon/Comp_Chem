@@ -90,66 +90,6 @@ The scripts for each step are prefixed with the letter 'a' (step 1), 'b' (step 2
  c3_sdf2mol2_mysql_names.py sdf-file(from corina+ionizer) suffix(for Folders after ring)
  c3_sdf2mol2_mysql_names_remove.py filename_containing_mol2_filenames(zipped does not hurt)
 ```
-##### Running Omega
-* Be careful! This script needs access to a mysql database &ndash; make sure to set the appropriate values that allow you access in the script.
-* change to 2_OMEGA.
-* required files:
-** torlib_1205.txt
-** omega_03.2_3_2.param
-** omega_07.2_3_2.param
-** om2_chunks_on_tmp.py ''or'' om2_chunks_on_scratch.py
-* commandline:
-```
- om2_chunks_on_tmp.py MOLS_SUBDIR_1 MOLS_SUBDIR_2 MOL_RAID MAXMOL
-```
-* alternative commandline if you want to run on the cluster:
-```
- om2_chunks_on_scratch.py MOLS_SUBDIR_1 MOLS_SUBDIR_2 MOL_RAID MAXMOL
-```
-* the individual arguments will be connected to form the path to the mol2-files generated in step 3:
-```
-/raid[MOL_RAID]/people/kolb/DB4/[MOLS_SUBDIR_2]/MOLS/[MOLS_SUBDIR_1]
-```
-* MAXMOL gives the maximum number of molecules which are processed in one chunk. It is advisable to kill the job between the processing of two chunks.
-
-##### Running AMSOL
-* Be careful! This script needs access to a mysql database &ndash; make sure to set the appropriate values that allow you access in the script.
-* change to 3_AMSOL
-* required files:
-** amsol_limit.py
-** amsol_functions.py
-** amsol.py
-** am_chunks_on_tmp.py ''or'' am_chunks_on_scratch.py
-* commandline:
-```
- am_chunks_on_tmp.py MOLS_SUBDIR_1 MOL_RAID MOLS_SUBDIR_2
-```
-* alternative commandline if you want to run on the cluster:
-```
- am_chunks_on_scratch.py MOLS_SUBDIR_1 MOL_RAID MOLS_SUBDIR_2
-```
-* the individual arguments will be connected to form the path to the mol2-files generated in step 3: 
-```
-/raid[MOL_RAID]/people/kolb/DB[MOLS_SUBDIR_2]/2_OMEGA/[MOLS_SUBDIR_1]
-```
-* the script will call amsol_limit.py, so make sure that this file is in your directory.
-
-##### Running Mol2DB
-
-* change to 4_MOL2DB
-* create a subfolder for every subpart of the database, i.e.,
-```
-RING_MORE_KEGG_HEI/OH_LN</tt>,<tt>RING_MORE_KEGG_HEI/OH_LP
-```
-* required files in 4_MOL2DB:
-** inhier_col
-** mol2db_limit.csh
-** lettercode.txt (a file specifying a single letter for each subdirectory)
-* run the appropriate script directly in the subfolder mrm_3_limit.py for molecules with multiple rings, mro_5.py for molecules with one ring, and mrn_1s.py for molecules with no rings.
-* in each script, make sure that the maximum number of molecules per .db file is set to not more than 1000.
-* keep in mind that the .mol2 file read by mol2db must contain exactly 6 lines between @<TRIPOS>MOLECULE and @<TRIPOS>ATOM
-
-##### Example: running mrm_3_limit.py
 
 * commandline:
 ```
