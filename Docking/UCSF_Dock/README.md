@@ -338,7 +338,3 @@ To prepare the ligand specification, reload the original pdb structure and perfo
 * Delete everything BUT the ligand atoms
 * Save as xtal-lig.pdb
 
-### Submitting Jobs
-
-To learn how to create and run a docking job, see the [[SGE Cluster Docking]] page.
-
