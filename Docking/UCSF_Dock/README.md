@@ -204,13 +204,13 @@ And the Make file will do the work.
 
 ## Preparing your Ligand
 
-### Automatic way, starting from <tt>SMILES</tt>
+### Automatic way, starting from SMILES
 
-This way, you will make use of John's automatic scripts for database preparation and actually upload new molecules to a special section of [http://zinc.docking.org/ ZINC].
+This way, you will make use of John's automatic scripts for database preparation and actually upload new molecules to a special section of [http://zinc.docking.org/].
    
-* it is advisable to create a special subdirectory, since many new    files will be generated.  
-* the file containing the [http://www.daylight.com/smiles/ SMILES] strings should contain a string    followed by an identifier on each line.  
-* OPTIONAL: run <tt>convert.py --i=yourname.smi --o=yourname.ism</tt> . This will  convert your SMILES to ''isomeric'' SMILES.
+* it is advisable to create a special subdirectory, since many new files will be generated.  
+* the file containing the [http://www.daylight.com/smiles/] strings should contain a string followed by an identifier on each line.  
+** OPTIONAL: run <tt>convert.py --i=yourname.smi --o=yourname.ism</tt> . This will  convert your SMILES to ''isomeric'' SMILES.
 * run <tt>dbgen.csh yourname.smi</tt>.  
 ** Note that the dbgen.csh does not work for more that 1000 molecules.
 ** Brake up your molecules into chunks of 1000 and run dbgen on each chunk.
@@ -231,12 +231,12 @@ To increase the number of molecules that are written out for the database genera
    
 * extract the ligand structure from the <tt>.pdb</tt>  file.  
 * assign hydrogens.  
-* assign all atom ([http://www.tripos.com/mol2/atom_types.html Sybyl/TAFF]) and bond types.  
+* assign all atom types and bond types.  
 * save it as <tt>ligandname.mol2</tt>  file.  
 
 #### Running <tt>Omega</tt>
    
-* run [http://www.eyesopen.com/products/applications/omega.html OMEGA], but don't ask me how to do that yet.
+* run [http://www.eyesopen.com/products/applications/omega.html], but don't ask me how to do that yet.
 
 #### Running <tt>Amsol</tt>
 
