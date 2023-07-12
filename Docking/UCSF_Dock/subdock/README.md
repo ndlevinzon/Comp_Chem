@@ -8,34 +8,6 @@ IMPORTANT: subdock.bash expects to live in the same directory as rundock.bash!!!
 
 * subdock.bash can be called directly from any location- it is not sensitive to the current working directory.
 
-# What's New?
-
-Compared to older scripts, SUBDOCK is easier to use, has more features, and is much more flexible!
-
-## December 2022
-
-* All jobs platforms (e.g slurm, sge) are supported on the same script
-
-* GNU Parallel is now supported as a jobs platform! Ideal for small-scale local testing. (https://www.gnu.org/software/parallel/)
-
-* Subdock can now be run on both db2.gz individual files & db2.tgz packages. A batch_size can be set for both types, allowing for more flexibility.
-
-* Arguments can be provided environmentally, e.g "export KEY=VALUE" or on the command line e.g "--key=value"
-
-* Subdock now prints out a superscript to copy-paste on success, convenient for re-submission.
-
-* Fully restartable on all jobs platforms! See below section for an explanation on what this means, why it matters, and instructions on usage.
-
-* INDOCK version header is automatically corrected, as are any file paths referenced by INDOCK.
-
-## May 2023
-
-* You can provide http(s) URLs to dockable files as your input in lieu of file paths!
-
-* Charity engine is now supported as a jobs platform! More instructions for using this further down. (https://www.charityengine.com/)
-
-* Subdock will automatically detect if your jobs failed- no need to use an extra script to check if your jobs have actually finished or not
-
 # Supported Platforms
 
 There are four platforms currently supported:
