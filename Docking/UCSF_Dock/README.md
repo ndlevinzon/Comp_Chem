@@ -204,7 +204,7 @@ And the Make file will do the work.
 
 ## Preparing your Ligand
 
-### Automatic way, starting from SMILES
+### Automatic way, starting from <tt>SMILES</tt>
 
 This way, you will make use of John's automatic scripts for database preparation and actually upload new molecules to a special section of [http://zinc.docking.org/ ZINC].
    
@@ -217,7 +217,7 @@ This way, you will make use of John's automatic scripts for database preparation
 ** Clean up your directory afterwards. dbgen.csh generates a lot of files that you do not need if it ran correctly.  
 * you should obtain a file <tt>somename.db.gz</tt> .
 
-#### optional
+#### Optional
 To increase the number of molecules that are written out for the database generation, copy the file $DOCK_BASE/data/omega.parm into the directory that dbgen.csh is going to be run in.
 * At the end of the omega.parm file you will see a section called "Torsion Driving Parameters", here you will find three variables that can be changed.
 ** SetMaxConfs(600)   #set to higher numbers ie. 1000
@@ -234,11 +234,11 @@ To increase the number of molecules that are written out for the database genera
 * assign all atom ([http://www.tripos.com/mol2/atom_types.html Sybyl/TAFF]) and bond types.  
 * save it as <tt>ligandname.mol2</tt>  file.  
 
-#### Running <tt>omega</tt>
+#### Running <tt>Omega</tt>
    
 * run [http://www.eyesopen.com/products/applications/omega.html OMEGA], but don't ask me how to do that yet.
 
-#### Running amsol
+#### Running <tt>Amsol</tt>
 
 * find more information about amsol [http://comp.chem.umn.edu/amsol/ on its homepage].  
 * <tt>mkdir ./amsol2</tt>   
@@ -268,7 +268,7 @@ To increase the number of molecules that are written out for the database genera
 
 *furthermore, there will be <tt>someothername.nmol2</tt>  file    which contains the correct partial charges.
 
-#### Running mol2db
+#### Running <tt>Mol2DB</tt>
    
 * edit <tt>someothername.nmol2</tt>  so that the <tt>@<TRIPOS>MOLECULE</tt> section consists of exactly '''6''' lines.  
 * edit the <tt>inhier</tt>  file so that the 'mol2_file',    'db_file' and 'solvation_table' entries are correct.  
@@ -320,7 +320,7 @@ Any changes to any file used by MakeDOCK will automatically run all the commands
 
 * Variables are set using 'VARNAME = contents'. They are later referenced using $VARNAME. The general syntax for a target section is 'target: dependencies'. Changes to any of the dependencies cause that target to be made. Targets are made using the rules (lines) in that section. The command 'make' actually runs the 'all:' target. You can specify a different target using 'make target'. 
 
-### Receptor Preparation
+### Receptor MakeDOCK
 
 To prepare a typical pdb structure for use as the receptor in MakeDOCK, do the following:
 
@@ -331,7 +331,7 @@ To prepare a typical pdb structure for use as the receptor in MakeDOCK, do the f
 * Save as rec_original.pdb
 * Run 'paranoia.csh' to clean up the rec_original.pdb file into the final rec.pdb file 
 
-### Ligand Preparation
+### Ligand MakeDOCK
 
 To prepare the ligand specification, reload the original pdb structure and perform the following steps:
 
