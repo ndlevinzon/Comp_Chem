@@ -7,6 +7,31 @@ The 3D pipeline is a collection of scripts and software packages that enable the
 ```
 source /nfs/soft/dock/versions/dock38/pipeline_3D_ligands/env.(sh|csh)
 ```
+* env.sh
+```
+#!/bin/bash
+base=/nfs/soft/dock/versions/dock38/pipeline_3D_ligands
+export BINDIR=$base/submit
+export SHRTCACHE=/scratch
+export LONGCACHE=/scratch
+export SOFT_HOME=$base/soft
+export LICENSE_HOME=$base/licenses
+export PATH=$PATH:$base/submit
+```
+* env.csh
+```
+#!/usr/bin/csh
+
+setenv SHRTCACHE /scratch
+setenv LONGCACHE /scratch
+
+set base=/nfs/soft/dock/versions/dock38/pipeline_3D_ligands
+
+setenv BINDIR $base/submit
+setenv SOFT_HOME $base/soft
+setenv LICENSE_HOME $base/licenses
+setenv PATH $PATH\:$base/submit
+```
 
 This environment will set up most of the required variables for you, as well as adds the submission scripts to your PATH, which means submission can be as simple as:
 
