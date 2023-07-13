@@ -180,9 +180,7 @@ aj
 Done! Results in $PWD/tarballs_repacked/H17P200_H19P400
 ```
 
-It should be noted that this script will be effective for fairly small batches of molecules, e.g on the range of millions, rather than billions of molecules. Talk to me (ben@tingle.org) or John Irwin for more information on how to repack Very Large ligand libraries.
-
-For docking from ligands built using our pipeline with default options, running this script unmodified is sufficient for creating appropriately sized packages for docking. You may wish to edit WORKING_DIRECTORY to /scratch or some other larger directory if running out of space on /tmp is a concern. The /tmp directory typically only holds around 50G of data, which may not be enough for some workloads or environments.
+It should be noted that this script will be effective for fairly small batches of molecules, e.g on the range of millions, rather than billions of molecules. For docking from ligands built using our pipeline with default options, running this script unmodified is sufficient for creating appropriately sized packages for docking. You may wish to edit WORKING_DIRECTORY to /scratch or some other larger directory if running out of space on /tmp is a concern. The /tmp directory typically only holds around 50G of data, which may not be enough for some workloads or environments.
 
 ## Script Arguments
 
