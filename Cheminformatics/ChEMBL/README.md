@@ -85,6 +85,7 @@ ChEMBL documentation has an excellent tutorial on crafting SQL queries and the s
 I mainly prefer using Python as I do all my exploratory data analysis, so I wanted to figure out a way to interact with the SQL database with Python. Packages such as pychembldb, razi are summarized in Iwatobipen’s blogs and are great starting points. I found the psycopg2 package to be useful as it can keep the feel of using SQL queries intact, and there is a ton of support for this package in StackOverflow.
 
 # Search_zinc22.py
+search_zinc22.py is a script for looking up zinc ids on the zinc22 system. The operation is simple- provide a file containing a list of zincids and a destination file to write to. The script will give you a progress bar as it searches the system. If a database is down, the script will let you know and continue gathering the results it can.
 ## Usage: 
 ```
 search_zinc22.py [-h] [--vendor-search] [--get-vendors] [--configuration-server-url CONFIGURATION_SERVER_URL] input_file results_out
@@ -105,9 +106,6 @@ optional arguments:
   --configuration-server-url CONFIGURATION_SERVER_URL
                         database containing configuration for zinc22 system
 ```
-
-search_zinc22.py is a script for looking up zinc ids on the zinc22 system. The operation is simple- provide a file containing a list of zincids and a destination file to write to. The script will give you a progress bar as it searches the system. If a database is down, the script will let you know and continue gathering the results it can.
-
 The output format is as follows:
 ```
 SMILES ZINC_ID TRANCHE_NAME
