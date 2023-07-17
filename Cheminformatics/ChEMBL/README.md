@@ -36,7 +36,7 @@ It will create instances from 1 to 5
 
  $ sh  /nfs/home/btingle/work/tin_install_new/create-psql-instances.sh [/local2] [start] [end]
  
-# Installing ChEMBL
+# Installing ChEMBL: Alternate Approach
 ChEMBL database is the primary source of data for doing any large-scale analysis in early Drug Discovery. Accessing data from ChEMBL is often seamless, which I have been using for the last three years. 
 But sometimes, getting data from ChEMBL API is slow, and when you are still exploring what kind of data you need and how the query should look, it can take forever. Local installation of the ChEMBL database helps alleviate the issue and makes data curation fast and more workable. 
 In this tutorial, I am using the local ChEMBL SQL database and the psycopg2 python package to curate a list of chemical descriptors for all active compounds against single-protein targets.
