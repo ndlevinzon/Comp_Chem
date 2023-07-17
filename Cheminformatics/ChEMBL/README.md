@@ -83,3 +83,74 @@ When you run the above query, it generates a long list of ~4000 molecules that a
 ChEMBL documentation has an excellent tutorial on crafting SQL queries and the schema and was very helpful to get started. I am a SQL novice and whatever I learned is from the Intro to SQL course from DataCamp. I highly recommend it for folks who want to learn the basics of SQL.
 
 I mainly prefer using Python as I do all my exploratory data analysis, so I wanted to figure out a way to interact with the SQL database with Python. Packages such as pychembldb, razi are summarized in Iwatobipen’s blogs and are great starting points. I found the psycopg2 package to be useful as it can keep the feel of using SQL queries intact, and there is a ton of support for this package in StackOverflow.
+
+# Search_zinc22.py
+## Usage: 
+```
+search_zinc22.py [-h] [--vendor-search] [--get-vendors] [--configuration-server-url CONFIGURATION_SERVER_URL] input_file results_out
+```
+
+search for smiles by zinc22 id
+
+positional arguments:
+```
+  input_file            file containing list of zinc ids or vendor codes to look up
+  results_out           destination file for output
+```
+optional arguments:
+```
+  -h, --help            show this help message and exit
+  --vendor-search       look up molecules by vendor code instead of zinc id
+  --get-vendors         get vendor supplier codes associated with zinc id
+  --configuration-server-url CONFIGURATION_SERVER_URL
+                        database containing configuration for zinc22 system
+```
+
+search_zinc22.py is a script for looking up zinc ids on the zinc22 system. The operation is simple- provide a file containing a list of zincids and a destination file to write to. The script will give you a progress bar as it searches the system. If a database is down, the script will let you know and continue gathering the results it can.
+
+The output format is as follows:
+```
+SMILES ZINC_ID TRANCHE_NAME
+```
+With --get-vendors or --vendor-search the output format looks like this:
+```
+SMILES ZINC_ID VENDOR_ID TRANCHE_NAME CATALOG</nowiki>
+```
+Meaning the script will find all vendor information and smiles associated with the provided zinc ids or vendor codes.
+
+### Usage w/ Bash
+```
+source /nfs/soft/zinc22/search_zinc/env/bin/activate
+python /nfs/soft/zinc22/search_zinc/search_zinc22.py input_zinc_ids.txt output_zinc_ids.txt
+python /nfs/soft/zinc22/search_zinc/search_zinc22.py --get-vendors input_zinc_ids.txt output_vendor_ids.txt</nowiki>
+```
+### Usage w/ Csh
+```
+source /nfs/soft/zinc22/search_zinc/env/bin/activate.csh
+python /nfs/soft/zinc22/search_zinc/search_zinc22.py input_zinc_ids.txt output_zinc_ids.txt
+python /nfs/soft/zinc22/search_zinc/search_zinc22.py --get-vendors input_zinc_ids.txt output_vendor_ids.txt</nowiki>
+```
+## Dealing with NULL
+Sometimes a ZINC ID will fail to look up. This could be because a server is down (the script will notify you if this is the case), or because the ID is missing from the system for some reason. In this case, it may be helpful to separate the molecules that didn't look up from the molecules that did. You may want to save them for later when the servers come back online, or to run a deeper search with comb_legacy_files.py (more on this below).
+
+## Example
+```
+[env]$ cat legitimate_ids.txt > input.txt
+[env]$ echo ZINCzz00ZZZZZZZZ >> input.txt
+[env]$ echo ZINCyy00AAAAAAAA >> input.txt
+[env]$ echo ZINCxx00BBBBBBBB >> input.txt
+[env]$ python search_zinc.py input.txt output.txt
+Searching Zinc22:  |XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX| 100.0%  0.00s 23/23 complete!
+[env]$ grep "_null_" output.txt
+_null_ ZINCzz00ZZZZZZZZ H33P270
+_null_ ZINCyy00AAAAAAAA H34P280
+_null_ ZINCxx00BBBBBBBB H35P290
+```
+
+search_zinc.py will not omit IDs that don't look up from the output, instead it will return the zinc id with "_null_" in every other field. Therefore we can use grep to filter our results.
+
+```
+[env]$ grep "_null_" output.txt > missing.txt
+[env]$ grep -v "_null_" output.txt > found.txt
+```
+
