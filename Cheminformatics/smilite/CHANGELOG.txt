@@ -1,0 +1,40 @@
+**VERSION 2.3.1 (07/25/2020)**
+
+- Fix bug to allow `zinc15` option in gen_zincid_smile_csv.py script 
+
+**VERSION 2.3.0 (06/10/2020)**
+
+- Fixes ZINC URL in `lookup_smile_str.py`
+- Adds an optional command line parameter (with arguments `zinc15` or `zinc12`) for `lookup_smile_str.py`
+
+**VERSION 2.2.0**
+
+-   Provides an optional command line argument (zinc15) to use ZINC15 as a backend for downloading SMILES
+
+**VERSION 2.1.0**
+
+- Functions and scripts to fetch ZINC IDs corresponding to a SMILE string query
+
+**VERSION 2.0.1**
+
+- Progress bar for add_to_sqlite.py
+
+**VERSION 2.0.0**
+
+- added SQLite features
+
+**VERSION 1.3.0**
+
+- added script and module function to compare SMILE strings across 2 files.
+
+**VERSION 1.2.0**
+
+- added Python 2.x support
+
+**VERSION 1.1.1**
+
+- PyPrind dependency fix
+
+**VERSION 1.1.0**  
+
+- added a progress bar (pyprind) to `generate_zincid_smile_csv()` function
