@@ -1,4 +1,42 @@
-# Working with ChEMBL
+# Installing ZINC22
+## Requirements
+- Root privilege
+* Install Python
+ ```
+ $ sh /nfs/home/chinzo/code/installation-utilities/install-python36.sh
+```
+* Install PostgreSQL 12
+Please replace [/local2]. This is your postgres data directory. 
+In this case script will create a data directory in this directory.
+```
+For example: /local2/psql/12/data
+ $ sh /nfs/home/chinzo/code/installation-utilities/install-postgres12.sh [/local2]
+```
+* Install RDKIT Cartridge
+You need to specify rdkit and python directory.
+```
+/opt/rdkit is directory that you are willing to install rdkit
+
+/opt/python/3.6.7 is directory that you have already installed it
+
+ $ /nfs/home/khtang/code/TIN_Scripts/TIN_setup/install_rdkit.sh [/opt/rdkit] [/opt/python/3.6.7]
+```
+## PostgreSQL12 configuration for TIN
+```
+sh /nfs/home/chinzo/code/installation-utilities/postgres-config.sh
+```
+## Creating multiple instances in PostgreSQL12
+Please replace [/local2]. This is your postgres data directory. 
+
+Please replace [star]. This is the instance start number Ex: 1
+
+Please replace [end]. This is the instance end number Ex: 5
+
+It will create instances from 1 to 5
+
+ $ sh  /nfs/home/btingle/work/tin_install_new/create-psql-instances.sh [/local2] [start] [end]
+ 
+# Installing ChEMBL
 ChEMBL database is the primary source of data for doing any large-scale analysis in early Drug Discovery. Accessing data from ChEMBL is often seamless, which I have been using for the last three years. 
 But sometimes, getting data from ChEMBL API is slow, and when you are still exploring what kind of data you need and how the query should look, it can take forever. Local installation of the ChEMBL database helps alleviate the issue and makes data curation fast and more workable. 
 In this tutorial, I am using the local ChEMBL SQL database and the psycopg2 python package to curate a list of chemical descriptors for all active compounds against single-protein targets.
