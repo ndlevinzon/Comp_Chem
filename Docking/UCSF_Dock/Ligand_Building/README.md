@@ -1,13 +1,78 @@
 # The 3D Ligand Building Pipeline
 The 3D pipeline is a collection of scripts and software packages that enable the massively parallel creation of dockable 3D molecules.
 
+## Installing the 3D Pipeline
+Installation of the 3D pipeline is somewhat tricky- the environment is very particular about which versions of which software should be used. It is thus easiest to copy the exact software packages we use from our servers- this should work provided they are installed in a 64-bit linux architecture, though depending on the distribution certain shared libraries may be missing.
+
+### Setting up the installation root
+
+First find a suitable directory which will serve as the root of the installation- this should be a directory that is visible from all nodes in the cluster.
+
+Within this directory, create two sub-directories:
+```
+$ROOT_DIR/
+    soft
+    licenses
+```
+Copy or link your openeye and chemaxon licenses to the licenses directory- name them ".oe-license.txt" and ".jchem-license.cxl", respectively.
+
+Next, clone the submission scripts from github to this directory.
+```
+git clone https://github.com/docking-org/zinc22-3d-submit
+```
+
+I like to rename this repository directory to just "submit", leaving the installation looking like this:
+```
+$ROOT_DIR/
+    soft
+    licenses/
+        .oe-license.txt
+        .jchem-license.cxl
+    submit
+```
+
+Finally, create the "env.sh" and "env.csh" scripts in the ROOT_DIR as follows:
+
+* bash
+```
+#!/bin/bash
+# env.sh
+base=<<ROOT_DIR>>
+export BINDIR=$base/submit
+export SHRTCACHE=<<TEMPDIR 1>>
+export LONGCACHE=<<TEMPDIR 2>>
+export SOFT_HOME=$base/soft
+export LICENSE_HOME=$base/licenses
+export PATH=$PATH:$base/submit
+```
+* csh
+```
+#!/usr/bin/csh
+# env.csh
+set base=<<ROOT_DIR>>
+setenv SHRTCACHE <<TEMPDIR 1>>
+setenv LONGCACHE <<TEMPDIR 2>>
+setenv BINDIR $base/submit
+setenv SOFT_HOME $base/soft
+setenv LICENSE_HOME $base/licenses
+setenv PATH $PATH\:$base/submit
+```
+
+<<ROOT_DIR>> should be the installation directory you chose.
+
+<<TEMPDIR 1>> and <<TEMPDIR 2>> should be temporary directories available to all nodes on the cluster- often in distributed computing environments there are special directories set aside for this purpose, e.g /scratch
+
+<<TEMPDIR 1>> will be used for short-term storage of small job files- it is thus appropriate to set this to a faster-access lower-capacity location, like /dev/shm. using /dev/shm can introduce problems, so it is safest to use the same value as LONGCACHE
+
+<<TEMPDIR 2>> will be used for long-term storage of software files- thus it is more appropriate to set this to a slower-access higher-capacity location, like /tmp or /scratch.
+
 ## EZ Setup
 
 ### BKS Cluster
 ```
 source /nfs/soft/dock/versions/dock38/pipeline_3D_ligands/env.(sh|csh)
 ```
-* env.sh
+* bash
 ```
 #!/bin/bash
 base=/nfs/soft/dock/versions/dock38/pipeline_3D_ligands
@@ -18,7 +83,7 @@ export SOFT_HOME=$base/soft
 export LICENSE_HOME=$base/licenses
 export PATH=$PATH:$base/submit
 ```
-* env.csh
+* csh
 ```
 #!/usr/bin/csh
 
