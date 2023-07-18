@@ -31,19 +31,14 @@ Arguments, respectively
 ## Using Charity Engine
 
 To use charity engine, you must have access to an executable of the charity engine CLI, as well as GNU parallel.
-
 Additionally, you must provide your charity authentication details in the form of the CHARITY_AUTHKEY or --charity-authkey variable.
-
 WIP, more specific instructions to come.
 
 # Supported File Types
 
 DOCK can be run on individual db2.gz files or db2.tgz tar packages.
-
 The file type can be specified via the --use-db2=true or --use-db2-tgz=true arguments. db2.tgz is the default
-
 Each job dispatched by SUBDOCK will consume BATCH_SIZE files, where BATCH_SIZE is equal to --use-db2-batch-size or --use-db2-tgz-batch-size depending on which file type is chosen.
-
 The number of jobs dispatched by SUBDOCK is equal to ceil(N / BATCH_SIZE), where N is the total number of input files.
 
 # Restartability
@@ -86,18 +81,18 @@ This example assumes you have access to a DOCK executable and an installed sched
 1. Source subdock code from github
  
 ```
-git clone https://github.com/docking-org/SUBDOCK.git</nowiki>
+git clone https://github.com/docking-org/SUBDOCK.git
 ```
 
 2. Fetch dockfiles from DUDE-Z- we will use DRD4 for this example. **note- SUBDOCK automatically detects your DOCK version & corrects the INDOCK header accordingly
 ```
-wget -r --reject="index.html*" -nH --cut-dirs=2 -l1 --no-parent https://dudez.docking.org/DOCKING_GRIDS_AND_POSES/DRD4/dockfiles/</nowiki>
+wget -r --reject="index.html*" -nH --cut-dirs=2 -l1 --no-parent https://dudez.docking.org/DOCKING_GRIDS_AND_POSES/DRD4/dockfiles/
 ```
 3a. Get db2 database subset sample via ZINC-22. Example provided below:
 ```
 wget http://files.docking.org/zinc22/zinc-22l/H17/H17P050/a/H17P050-N-laa.db2.tgz
 wget http://files.docking.org/zinc22/zinc-22l/H17/H17P050/a/H17P050-N-lab.db2.tgz
-wget http://files.docking.org/zinc22/zinc-22l/H17/H17P050/a/H17P050-N-lac.db2.tgz</nowiki>
+wget http://files.docking.org/zinc22/zinc-22l/H17/H17P050/a/H17P050-N-lac.db2.tgz
 ```
 
 You can select a db2 database subset via cartblanche22.docking.org- for wget-able files, choose the DOCK37 (*.db2.tgz) format, with URL download type. Multiple download types are supported, for example if you are on Wynton you can download Wynton file paths- removing the need to download the files yourself.
@@ -128,7 +123,7 @@ Any value other than exactly "true" will be interpreted as false.
 
 6a. Run docking!
 ```
-bash ~/SUBDOCK/subdock.bash</nowiki>
+bash ~/SUBDOCK/subdock.bash
 ```
 
 6b. You can also use command line arguments instead of environment export, if desired. These can be mixed and matched.
