@@ -467,4 +467,374 @@ Sometimes an output tarball will have few or no entries within. Certain molecule
 
 It is safe to re-run the same file multiple times- the script takes care of making sure not to re-run any jobs that have already completed successfully prior. This is only the case if that file's corresponding batch-3d.d output directory has not been moved or deleted.
 
+== Developer Example: Building your own db2.tgz files & Submitting jobs ==
+
+What you need:
+# One or more db2(.gz) files
+# An nfs directory(s) to store:
+## docking input/output
+## dockfiles
+## dock executable
+# subdock & rundock scripts
+
+Create a list of all the db2 files you want to run docking against. The example below is merely a suggestion, make the list in any way you please so long as each entry is a *full* path (relative to your working directory) to a db2 (or db2.gz) file.
+
+ <nowiki>
+find $MY_DB2_SOURCE -type f -name "*.db2*" > my_db2_list</nowiki>
+
+Split this list into reasonably sized chunks, our standard is 5000 but you can make them as large or small as you like. Do be careful about making the chunks larger- 5000 db2s is already quite heavy.
+
+ <nowiki>
+>> split -a 3 --lines=5000 my_db2_list db2_chunk.
+
+>> ls
+db2_chunk_aaa
+db2_chunk_aab
+db2_chunk_aac
+...
+my_db2_list</nowiki>
+
+Create a db2.tgz archive from each of these lists.
+
+ <nowiki>
+for db2_chunk in db2_chunk.*; do
+    tar -czf $db2_chunk.db2.tgz --files-from $db2_chunk
+done</nowiki>
+
+
+If you already have premade db2.tgz files, for example from the zinc22 3D archive, start the tutorial here.
+
+Create a list of every db2.tgz archive. Each job will evaluate one db2.tgz archive. Again, this example is a suggestion applicable only if you've been following the tutorial up to this point.
+
+ <nowiki>
+find . -type f -name "db2_chunk.*.db2.tgz" > job_input_list</nowiki>
+
+Now all you need to do is specify your docking parameters and launch the jobs. Set INPUT_SOURCE to be the job_input_list created in the previous step.
+
+SGE
+
+ <nowiki>
+export DOCKEXEC=<dock executable path>
+export DOCKFILES=<dockfiles path>
+export EXPORT_DEST=<output directory path>
+# optional arguments for the job controller. Note that these arguments are examples and not the only configuration recommended
+export QSUB_ARGS="-l s_rt=00:28:00 -l h_rt=00:30:00 -l mem_free=2G"
+
+export INPUT_SOURCE=job_input_list
+
+bash <scripts directory>/sge/subdock.bash</nowiki>
+
+SLURM
+
+ <nowiki>
+export DOCKEXEC=<dock executable path>
+export DOCKFILES=<dockfiles path>
+export EXPORT_DEST=<output directory path>
+export SBATCH_ARGS="--time=00:30:00 --mem-per-cpu=2G"
+
+export INPUT_SOURCE=job_input_list
+
+bash <scripts directory>/slurm/subdock.bash</nowiki>
+
+=== Large Docking Jobs ===
+
+If your list of db2.tgz files is very large you may want to further split it. Each db2.tgz file in the job_input_list represents a job submitted to the queue, and often there is a limit on how many jobs can be queued at once.
+
+In order to avoid this problem, we will need an automatic solution to split up our job_input_list and submit batches of jobs only when there is space left in the queue.
+
+For example, imagine we want to submit in batches of 10,000 and limit total jobs to 50,000 (with a package size of 5000 this is 250M molecules in the queue maximum, submitting 50M at a time). The example I have shows how you would do this in slurm. 
+
+ <nowiki>
+#!/bin/bash
+### submit_all_slurm.bash
+
+BINDIR=$(dirname $0)
+
+BATCH_SIZE=10000
+MAX_QUEUED=50000
+
+# the script is more portable if we provide the various parameters as arguments instead of hard-coding
+INPUT_LIST=$1
+BASE_EXPORT_DEST=$2 # this is the directory where further subdirectories will be created that contain docking job results
+export DOCKEXEC=$3
+export DOCKFILES=$4
+
+# we can use our EXPORT_DEST as staging grounds for our input
+mkdir -p $BASE_EXPORT_DEST/input
+
+split --lines=$BATCH_SIZE -a 3 -n $INPUT_LIST $BASE_EXPORT_DEST/input/job_input.
+
+export SBATCH_ARGS="--time=00:30:00 --mem-per-cpu=2G -J dock"
+
+for job_input in $BASE_EXPORT_DEST/input/job_input.*; do
+
+    export INPUT_SOURCE=$job_input
+    input_num=$(printf $job_input | cut -d'.' -f2) # get the suffix of the split filename
+
+    export EXPORT_DEST=$BASE_EXPORT_DEST/$input_num
+
+    # loop forever
+    while [ -z ]; do
+
+        # counts how many jobs in total are pending or running on this user
+        njobs=$(squeue -u $(whoami) -h -t pending,running -r | wc -l)
+        # if you want to instead set a limit on how many *dock* jobs are pending or running you would just run the command through a filter
+        # njobs=$(squeue -u $(whoami) -h -t pending,running -r | grep "dock" | wc -l)
+
+        if [ $njobs -lt $((MAX_QUEUED-BATCH_SIZE)) ]; then
+            break
+        fi
+
+        sleep 10
+    done
+
+    # the slurm subdock and rundock scripts need to live next to this script in a directory named "slurm"
+    bash $BINDIR/slurm/subdock.bash
+done</nowiki>
+
+This script will run until all jobs are submitted, so for very large jobs you may want to keep the process alive in a screen.
+
+== Tip: Using Wynton's $TMPDIR ==
+
+<b>Doing this with SHRTCACHE_USE_ENV</b>
+
+Before you run subdock, simply export the SHRTCACHE_USE_ENV option.
+
+ <nowiki>
+export SHRTCACHE_USE_ENV=TMPDIR</nowiki>
+
+This will cause the script to use the $TMPDIR variable for SHRTCACHE.
+
+== Example: Running a lot of docking jobs ==
+
+* see [[ZINC22:Current status]] for more info about where ZINC can be found.
+
+* 1. set up sdi files
+ mkdir sdi
+ export sdi=sdi
+ ls /wynton/group/bks/zinc-22/H19/H19P0??/*.db2.tgz > $sdi/h19p0.in
+ ls /wynton/group/bks/zinc-22/H19/H19P1??/*.db2.tgz > $sdi/h19p1.in
+ ls /wynton/group/bks/zinc-22/H19/H19P2??/*.db2.tgz > $sdi/h19p2.in
+ ls /wynton/group/bks/zinc-22/H19/H19P3??/*.db2.tgz > $sdi/h19p3.in
+ and so on
+
+* 2. set up INDOCK and dockfiles. rename dockfiles to dockfiles.$indockhash. On some nodes, the shasum command is called by sha1sum. Ultimately, renaming the dockfiles to a unique dockfiles is key. 
+
+Note: As of 3/19/2021, this is no longer necessary
+
+ bash
+ indockhash=$(cat INDOCK | shasum | awk '{print substr($1, 1, 12)}')
+
+* 3. super script:
+
+ <nowiki>
+export DOCKBASE=/wynton/group/bks/work/jji/DOCK
+export DOCKFILES=$WORKDIR/dockfiles.21751f1bb16b
+export DOCKEXEC=$DOCKBASE/docking/DOCK/bin/dock64
+#export SHRTCACHE=/dev/shm # default
+export SHRTCACHE=/scratch
+export LONGCACHE=/scratch
+export QSUB_ARGS="-l s_rt=00:28:00 -l h_rt=00:30:00 -l mem_free=2G"
+
+for i in  sdi/*.in  ; do
+        export k=$(basename $i .in)
+	echo k $k
+	export INPUT_SOURCE=$PWD/$i
+	export EXPORT_DEST=$PWD/output/$k
+	$DOCKBASE/docking/submit/sge/subdock.bash
+done
+</nowiki>
+
+# 3a. to run for first time
+ sh super
+
+# 4. how to restart (to make sure complete, iterate until complete)
+
+ sh super
+
+# 5. check which output is valid (and broken or incomplete output)
+
+# 6. extract all blazing fast
+
+# 7. extract mol2
+
+more soon, under active development, Jan 28.
+
+== Appendix: Docking mono-cations of ZINC22 with DOCK3.8 on Wynton ==
+Added by Ying 3/10/2021
+
+To use: copy and paste the code section into terminal. '''Note to change the path where labelled with ''CHANGE this'' '''
+
+* '''set up the folder to run docking. '''
+Path to my example: /wynton/home/shoichetlab/yingyang/work/5HT-5a/10_AL-dock/zinc22_3d_build_3-10-2021
+  mkdir zinc22_3d_build_3-10-2021
+  cd zinc22_3d_build_3-10-2021
+
+* '''copy INDOCK into dockfiles folder, and transfer to the created folder'''
+  cp INDOCK dockfiles
+  scp -r INDOCK dockfiles dt2.wynton.ucsf.edu:/path_to_created_folder
+
+* '''get sdi of monocations of already built ZINC22 (<= H26 heavy atom count)'''
+Modify to your own need...
+ <nowiki>
+mkdir sdi
+
+foreach i (`seq 4 1 26`)
+  set hac = `printf "H%02d" $i `
+  echo $i $hac
+  
+  touch sdi/${hac}.sdi
+  # CHANGE this: to your need
+  foreach tgz (`ls /wynton/group/bks/zinc-22*/${hac}/${hac}[PM]???/*-O*.db2.tgz`)
+    ls $tgz
+    echo $tgz >> sdi/${hac}.sdi
+  end
+end
+</nowiki>
+
+* '''rename the dockfiles directory'''
+
+Note: As of 3/19/2021 this step is no longer necessary
+
+  indockhash=$(cat INDOCK | sha1sum | awk '{print substr($1, 1, 12)}')
+  mv dockfiles dockfiles.${indockhash}
+
+* '''write and run the super_run.sh'''
+ <nowiki>
+cat <<EOF > super_run.sh
+export DOCKBASE=/wynton/group/bks/soft/DOCK-3.8.0.1
+export DOCKEXEC=\$DOCKBASE/docking/DOCK/bin/dock64
+
+# CHANGE here: path to the previously renamed dockfiles.\${indockhash}
+### Note: as of 3/19/2021 renaming your dockfiles is no longer necessary
+export DOCKFILES=/wynton/group/bks/work/yingyang/5HT-5a/10_AL-dock/zinc22_3d_build_3-10-2021/dockfiles.${indockhash}
+export SHRTCACHE=/scratch
+export LONGCACHE=/scratch
+export QSUB_ARGS="-l s_rt=00:28:00 -l h_rt=00:30:00 -l mem_free=2G"
+
+for i in  sdi/*.sdi  ; do
+    export k=\$(basename \$i .sdi)
+    echo k \$k
+    export INPUT_SOURCE=$PWD/\$i
+    export EXPORT_DEST=$PWD/output/\$k
+    \$DOCKBASE/docking/submit/sge/subdock.bash
+done
+EOF
+
+bash super_run.sh
+</nowiki>
+
+* '''keep submitting the super_run script until all db2s have been docked. '''
+After all docking jobs finish, check the output. If no weird error, we can use a while loop to restart.
+ <nowiki>
+while true
+do
+  export jobN=$(qstat | grep -c 'rundock')
+  if [[ $jobN -gt 0 ]] 
+  then
+    sleep 60
+  else 
+    bash super_run.sh
+  fi
+done
+</nowiki>
+When no new job is going to be submitted, use Ctrl+c to exit the while loop.
+
+* '''extract scores from output. '''
+ <nowiki>
+cat << EOF > qsub_extract.csh
+#\$ -S /bin/csh
+#\$ -cwd
+#\$ -pe smp 1
+#\$ -l mem_free=100G
+#\$ -l scratch=100G
+#\$ -l h_rt=50:00:00
+#\$ -j yes
+#\$ -o extract_all.out
+
+hostname
+date
+
+setenv DOCKBASE /wynton/group/bks/soft/DOCK-3.8.0.1
+
+setenv dir_in $PWD
+
+if ! (-d \$TMPDIR ) then
+    if (-d /scratch ) then
+        setenv TMPDIR /scratch/\$USER
+    else
+        setenv TMPDIR /tmp/\$USER
+    endif
+    mkdir -p \$TMPDIR
+endif
+pushd \$TMPDIR
+
+ls -d \${dir_in}/output/*/*/ > dirlist
+
+python \$DOCKBASE/analysis/extract_all_blazing_fast.py \
+dirlist extract_all.txt -30
+
+mv extract_all.* \$dir_in
+
+popd
+
+echo '---job info---'
+qstat -j \$JOB_ID
+echo '---complete---'
+EOF
+
+qsub qsub_extract.csh
+</nowiki>
+
+Another way is to run the command from the login node (Not recommended since sorting utilizes large memory)
+ ls -d output/*/*/ > dirlist
+ python $DOCKBASE/analysis/extract_all_blazing_fast.py dirlist extract_all.txt -20
+
+* '''get poses in parallel'''
+ <nowiki>
+set score_file = $PWD/extract_all.sort.uniq.txt
+set score_name = ${score_file:t:r}
+set fileprefix = 'tmp_'
+set number_per_file = 5000
+
+set workdir  = $PWD/${score_name}_poses
+mkdir -p $workdir 
+cd $workdir
+
+split --lines=$number_per_file --suffix-length=4 \
+-d $score_file ${fileprefix}
+
+set num  = ` ls ${fileprefix}* | wc -l `
+echo "Number of score files to process:" $num
+
+cat << EOF > qsub_poses.csh
+#\$ -S /bin/csh
+#\$ -cwd
+#\$ -j yes
+#\$ -pe smp 1
+#\$ -l mem_free=5G
+#\$ -l scratch=20G
+#\$ -l h_rt=25:00:00
+#\$ -t 1-$num
+
+hostname
+date
+
+setenv DOCKBASE /wynton/group/bks/soft/DOCK-3.8.0.1
+
+set list = \` ls \$PWD/${fileprefix}* \` 
+set MOL = "\${list[\$SGE_TASK_ID]}"
+set name = \${MOL:t:r}
+
+python2 $DOCKBASE/analysis/getposes_blazing_faster.py \
+"" \${MOL} $number_per_file poses_\${name}.mol2 test.mol2.gz
+
+EOF
+
+qsub qsub_poses.csh
+cd ../
+ </nowiki>
+
+* '''Post-processing...'''
+
 For example, if one of your nodes went down and caused a bunch of jobs to fail, it would be safe to re-run ./submit-all-jobs.bash to re-submit those jobs. (assuming there are no jobs for that file currently queued/running)
