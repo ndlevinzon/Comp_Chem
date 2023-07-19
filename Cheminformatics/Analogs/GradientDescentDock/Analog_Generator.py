@@ -7,7 +7,7 @@ import pandas as pd
 from PIL import Image
 from collections import deque
 from rdkit import Chem
-from rdkit.Chem import Draw
+from rdkit.Chem import Draw, Descriptors
 from rdkit.Chem.rdchem import HybridizationType, BondType, ChiralType, BondStereo, AtomValenceException
 from rdkit.Chem.EnumerateHeterocycles import EnumerateHeterocycles
 from rdkit.Chem.EnumerateStereoisomers import EnumerateStereoisomers
@@ -20,6 +20,7 @@ print(f"Starting Time: {start_time}")
 # --------------------------Stereoisomer Generator-------------------------- #
 
 def stereoisomerism(smiles):
+    """If a stereocenter is found, all stereoisomers are enumerated"""
     parent_mol = Chem.MolFromSmiles(smiles)
     if parent_mol is None:
         print("Invalid parent molecule SMILES")
@@ -28,7 +29,7 @@ def stereoisomerism(smiles):
     parent_mol = Chem.AddHs(parent_mol)
 
     # Check if parent compound has stereocenters
-    if not any(atom.GetChiralTag() != Chem.ChiralType.CHI_UNSPECIFIED for atom in parent_mol.GetAtoms()):
+    if not any(atom.GetChiralTag() != ChiralType.CHI_UNSPECIFIED for atom in parent_mol.GetAtoms()):
         return [Chem.RWMol(parent_mol)]  # Return the parent compound itself if no stereocenters are present
 
     analogs = []
@@ -65,11 +66,18 @@ def stereoisomerism(smiles):
 
 def trim_extremities(smiles):
     """Trim Parent Molecule Extremity Atoms Once"""
+
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
     if not mol:
         raise ValueError(f"Invalid SMILES: {smiles}")
 
+    # Calculate the molecular weight of the parent molecule
+    mw = Descriptors.MolWt(mol)
+
+    # Exit the function if the molecular weight is less than or equal to 500 Da
+    if mw <= 500:
+        return
     analogs = []
 
     # Adjust valence of the molecule
@@ -536,7 +544,6 @@ def bioisosters_scanning(smiles):
     ]
     return scanning(smiles, fragments)
 
-
 # --------------------------Atom Neutralization-------------------------- #
 
 def neutralize_atoms(mol):
@@ -580,7 +587,7 @@ def main():
     # Specify the input and output file names
     path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/'
     smiles_input_filename = 'rings.smi'
-    output_file_prefix = "stereo2"
+    output_file_prefix = "pKa"
 
     # Define the list of parent SMILES to take pictures of
     take_picture = []  # Add your desired parent SMILES here
@@ -613,7 +620,7 @@ def main():
                         if not analog_smiles:
                             raise ValueError(f"Invalid SMILES: {analog_smiles}")
                         if analog_smiles not in all_analogs:
-                            fakezinc = "fakezinc" + str(analog_count).zfill(8)
+                            fakezinc = str(smiles) + "_analog"+ str(analog_count).zfill(4)
                             lines_out.append(f"{analog_smiles} {fakezinc}")
                             analog_key_scan[1].append([analog_smiles, fakezinc])
                             all_analogs.append(analog_smiles)
