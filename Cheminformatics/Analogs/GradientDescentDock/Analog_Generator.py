@@ -65,7 +65,7 @@ def stereoisomerism(smiles):
 
 
 def trim_extremities(smiles):
-    """Trim Parent Molecule Extremity Atoms Once"""
+    """Trim Parent Molecule Extremity Atoms One At A Time if M.W. > 500 Da"""
 
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
