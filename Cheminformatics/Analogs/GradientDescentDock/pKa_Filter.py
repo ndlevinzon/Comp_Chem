@@ -1,15 +1,21 @@
 import re
+import os
 import pandas as pd
 import subprocess
 
+# Get the current working directory
+current_directory = os.getcwd()
+
+smi_filename = 'phenol_benchmark-analogs-i1-o96.smi'
+
 # Define the input file path
-input_file = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/phenol_benchmark-analogs-i1-o96.smi'
+input_file = f'{current_directory}{smi_filename}'
 
 # Define the first output file path
-output_file1 = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/phenol/smiles_test.txt'
+output_file1 = f'{current_directory}smiles_test.txt'
 
 # Define the second output file path
-output_file2 = '/mnt/nfs/home/nlevinzon/benchmarks/output.txt'
+output_file2 = f'{current_directory}cxcalc_output.log'
 
 # Define the regular expression pattern to capture both smile_codes and zinc_codes
 pattern = r'^(\S+)\s+(\S+)$'
@@ -29,7 +35,7 @@ with open(output_file1, 'w') as file:
         file.write(f"{match[0]}\t{match[1]}\n")
 
 # Run the command in the terminal
-command = f"./cxcalc -i {output_file1} logP pKa > {output_file2}"
+command = f"./cxcalc -i {output_file1} logP pKa >> {output_file2}"
 subprocess.run(command, shell=True)
 
 # Read the first output file into a pandas DataFrame
