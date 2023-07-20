@@ -27,6 +27,10 @@ def main():
     # Output the combined DataFrame to a CSV file
     df_combined.to_csv(f'{smi_filename}_filtered.csv', index=False)
 
+    # Delete _temp files
+    os.remove(cxcalc_output)
+    os.remove(RO5_output)
+
 
 def pKa(input_file, cxcalc_output):
     # Read the input file into a pandas DataFrame
@@ -78,27 +82,16 @@ def RO5(df_cxcalc, input_file, RO5_output):
         f'/mnt/nfs/home/nlevinzon/freechem/freechem-19.15.r4/bin/evaluate -e "mass() <= 500 && logP() <= 5 && donorCount() <= 5 && acceptorCount() <= 10 && rotatableBondCount() <= 10 && PSA() <= 140" {input_file} > {RO5_output}'
     subprocess.run(RO5_cmd, shell=True)
 
-    # Read the RO5 output file into a pandas DataFrame
+    # Read the RO5 output file line by line into a list
     with open(RO5_output, 'r') as ro5_file:
-        first_integer = None
-        ro5_data = []
-        for line in ro5_file:
-            line = line.strip()
-            try:
-                integer_value = int(line)
-                if first_integer is None:
-                    first_integer = integer_value
-                ro5_data.append(integer_value)
-            except ValueError:
-                # Skip non-integer lines
-                pass
+        ro5_data = [int(line.strip()) for line in ro5_file if line.strip().isdigit()]
 
     # Create a DataFrame with the RO5 data
     df_RO5 = pd.DataFrame(ro5_data, columns=['RO5'])
 
     # If the DataFrame is empty, fill it with the first encountered integer value
-    if df_RO5.empty and first_integer is not None:
-        df_RO5['RO5'] = first_integer
+    if df_RO5.empty and ro5_data:
+        df_RO5['RO5'] = ro5_data[0]
 
     # Merge the DataFrames to the correct smiles_codes and concatenate the DataFrames along the columns axis
     df_combined = pd.concat([df_cxcalc, df_RO5], axis=1, ignore_index=True)
