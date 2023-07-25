@@ -1,4 +1,5 @@
 # Jonathan Borowsky and Nathan Levinzon, UCSF 2023
+import argparse
 import pickle
 import math
 import time
@@ -472,9 +473,20 @@ def neutralize_atoms(mol):
             atom.UpdatePropertyCache()
     return mol
 
+
+# --------------------------I/O--------------------------#
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Generate analogs from a .smi file.")
+    parser.add_argument("-i", "--input", type=str, required=True, help="Input SMILES file name.")
+    parser.add_argument("-o", "--output", type=str, required=True, help="Output file prefix.")
+    return parser.parse_args()
+
 # --------------------------Switchboard--------------------------#
 
 def main():
+    # Get command-line arguments
+    args = parse_arguments()
+
     # Define the analogue methods and their corresponding names
     analog_methods = [
         [trim_extremities, "trim"],
@@ -497,15 +509,13 @@ def main():
     ]
 
     # Specify the input and output file names
-    path = '/mnt/nfs/home/nlevinzon/analog_gen/'
-    smiles_input_filename = 'test.smi'
-    output_file_prefix = "pKa"
-
-    # Define the list of parent SMILES to take pictures of
-    take_picture = []  # Add your desired parent SMILES here
+    path = os.getcwd()
+    smi_input_filename = args.input
+    output_file_prefix = args.output
 
     # Read the input file and store the smiles and zinc IDs in a DataFrame
-    smiles_zinc_input = pd.read_csv(f'{path}{smiles_input_filename}', sep=' ', header=None, names=['Smiles', 'ZincID'])
+    smiles_zinc_input = pd.read_csv(os.path.join(path, smi_input_filename),
+                                    sep=' ', header=None, names=['Smiles', 'ZincID'])
 
     analog_key = []
     lines_out = []
@@ -532,7 +542,7 @@ def main():
                         if not analog_smiles:
                             raise ValueError(f"Invalid SMILES: {analog_smiles}")
                         if analog_smiles not in all_analogs:
-                            fakezinc = "_analog"+ str(analog_count).zfill(4)
+                            fakezinc = str(zinc_id) + "_analog"+ str(analog_count).zfill(4)
                             lines_out.append(f"{analog_smiles} {fakezinc}")
                             analog_key_scan[1].append([analog_smiles, fakezinc])
                             all_analogs.append(analog_smiles)
@@ -553,13 +563,13 @@ def main():
         analog_key.append(analog_key_line)
 
     # Write the generated smiles and fake zincs to a file
-    output_file = f"{path}{output_file_prefix}-analogs-i{len(smiles_zinc_input)}-o{len(lines_out)}.smi"
+    output_file = f"{path}/{output_file_prefix}-analogs-i{len(smiles_zinc_input)}-o{len(lines_out)}.smi"
     with open(output_file, "w") as f2:
         for line in lines_out:
             f2.write(line + "\n")
 
     # Write the key specifying which molecules are analogues of which other molecules and by which analoging processes
-    key_file = f"{path}{output_file_prefix}-key-i{len(smiles_zinc_input)}-o{len(lines_out)}.out"
+    key_file = f"{path}/{output_file_prefix}-key-i{len(smiles_zinc_input)}-o{len(lines_out)}.out"
     with open(key_file, "wb") as fp:
         pickle.dump(analog_key, fp)
 
@@ -574,6 +584,9 @@ def main():
     # Calculate molecules generated per second
     benchmark = float(len(lines_out)) / elapsed_time
     print(f"Benchmark: {benchmark} molecules/second")
+
+    # Define the list of parent SMILES to take pictures of
+    take_picture = []  # Add your desired parent SMILES here
 
     # Check if the "take_picture" list is not empty
     if take_picture:
@@ -621,7 +634,7 @@ def main():
 
                         # Save the grid image as a PNG file
                         try:
-                            grid_image.save(f"{path}{parent_smiles}-{method}.png")
+                            grid_image.save(f"{path}/{parent_smiles}-{method}.png")
                         except Exception as e:
                             print(f"Error saving the grid image: {e}")
 
