@@ -1,14 +1,22 @@
 import os
 import pandas as pd
+import argparse
 import subprocess
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Generate pKa/b, logP, and Lipinski Rules for .smi")
+    parser.add_argument("-i", "--input", type=str, required=True, help="Input SMILES file name.")
+    return parser.parse_args()
 
 def main():
+    # Get command-line arguments
+    args = parse_arguments()
+    
     # Get the current working directory
     current_directory = os.getcwd()
 
     # Define the input file path
-    smi_filename = 'pKa-analogs-i1-o90.smi'  # Replace this with your actual file name or path
+    smi_filename = args.input  # Replace this with your actual file name or path
     input_file = os.path.join(current_directory, smi_filename)
     print(f'Input File: {input_file}')
 
