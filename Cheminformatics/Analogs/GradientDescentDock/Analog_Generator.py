@@ -16,51 +16,6 @@ from rdkit.Chem.EnumerateStereoisomers import EnumerateStereoisomers
 start_time = time.time()
 print(f"Starting Time: {start_time}")
 
-
-# --------------------------Stereoisomer Generator-------------------------- #
-
-def stereoisomerism(smiles):
-    """If a stereocenter is found, all stereoisomers are enumerated"""
-    parent_mol = Chem.MolFromSmiles(smiles)
-    if parent_mol is None:
-        print("Invalid parent molecule SMILES")
-        return None
-
-    parent_mol = Chem.AddHs(parent_mol)
-
-    # Check if parent compound has stereocenters
-    if not any(atom.GetChiralTag() != ChiralType.CHI_UNSPECIFIED for atom in parent_mol.GetAtoms()):
-        return [Chem.RWMol(parent_mol)]  # Return the parent compound itself if no stereocenters are present
-
-    analogs = []
-
-    # Enumerate chiral centers
-    chiral_centers = [atom.GetIdx() for atom in parent_mol.GetAtoms() if
-                      atom.GetChiralTag() != Chem.ChiralType.CHI_UNSPECIFIED]
-    for chiral_idx in chiral_centers:
-        chiral_atom = parent_mol.GetAtomWithIdx(chiral_idx)
-        chiral_atom.SetChiralTag(Chem.ChiralType.CHI_UNSPECIFIED)
-
-    # Enumerate E-Z isomerism
-    double_bonds = [bond.GetIdx() for bond in parent_mol.GetBonds() if bond.GetBondType() == Chem.BondType.DOUBLE]
-    for double_bond_idx in double_bonds:
-        double_bond = parent_mol.GetBondWithIdx(double_bond_idx)
-        double_bond.SetStereo(Chem.BondStereo.STEREOANY)
-
-    Chem.RemoveStereochemistry(parent_mol)
-
-    # Generate stereoisomers
-    unique_smiles = set()
-    for isomer in Chem.EnumerateStereoisomers(parent_mol):
-        isomer = Chem.AddHs(isomer)  # Add hydrogens to the isomer
-        smiles = Chem.MolToSmiles(isomer, isomericSmiles=True)
-        if smiles != smiles and smiles not in unique_smiles:
-            unique_smiles.add(smiles)
-            analogs.append(Chem.RWMol(isomer))
-
-    return analogs
-
-
 # --------------------------Extremity Trimmer-------------------------- #
 
 
@@ -110,12 +65,7 @@ def trim_extremities(smiles):
     # Remove duplicates and the initial SMILES from the analogs list
     analogs = [mol for mol in analogs if mol != mol and Chem.MolToSmiles(mol) != smiles]
 
-    # Enumerate isomers for the analogs
-    isomer_analogs = []
-    for analog in analogs:
-        isomers = stereoisomerism(Chem.MolToSmiles(analog, isomericSmiles=True))
-        isomer_analogs.extend(isomers)
-    return isomer_analogs
+    return analogs
 
 # --------------------------Bond Order Changes-------------------------- #
 
@@ -176,13 +126,7 @@ def BO_stepup(smiles):
     # Remove duplicates and the initial SMILES from the analogs list
     analogs = [mol for mol in analogs if mol != mol and Chem.MolToSmiles(mol) != smiles]
 
-    # Enumerate isomers for the analogs
-    isomer_analogs = []
-    for analog in analogs:
-        isomers = stereoisomerism(Chem.MolToSmiles(analog, isomericSmiles=True))
-        isomer_analogs.extend(isomers)
-    return isomer_analogs
-
+    return analogs
 
 def BO_stepdown(smiles):
     """Decreases Bond Order of Non-Single Bonds"""
@@ -226,12 +170,7 @@ def BO_stepdown(smiles):
     analogs_smiles = list(set(analogs_smiles) - {smiles})
     analogs = [Chem.MolFromSmiles(smiles) for smiles in analogs_smiles]
 
-    # Enumerate isomers for the analogs
-    isomer_analogs = []
-    for analog in analogs:
-        isomers = stereoisomerism(Chem.MolToSmiles(analog, isomericSmiles=True))
-        isomer_analogs.extend(isomers)
-    return isomer_analogs
+    return analogs
 
 # --------------------------Ring Changes-------------------------- #
 
@@ -296,13 +235,7 @@ def ring_breaker(smiles):
     # Remove duplicates and the initial SMILES from the analogs list
     analogs = [mol for mol in analogs if Chem.MolToSmiles(mol) != smiles]
 
-    # Enumerate isomers for the analogs
-    isomer_analogs = []
-    for analog in analogs:
-        isomers = stereoisomerism(Chem.MolToSmiles(analog,isomericSmiles=True))
-        isomer_analogs.extend(isomers)
-    return isomer_analogs
-
+    return analogs
 
 def ring_maker(smiles):
     """Enumerates Terminal -CH3, Finds Paths Of Length (4, 5) And Forms Rings With sp3 Carbons On Path"""
@@ -380,12 +313,7 @@ def ring_maker(smiles):
     # Remove duplicates and the initial SMILES from the analogs list
     analogs = [mol for mol in analogs if Chem.MolToSmiles(mol) != smiles]
 
-    # Enumerate isomers for the analogs
-    isomer_analogs = []
-    for analog in analogs:
-        isomers = stereoisomerism(Chem.MolToSmiles(analog, isomericSmiles=True))
-        isomer_analogs.extend(isomers)
-    return isomer_analogs
+    return analogs
 
 # --------------------------Atom Walks-------------------------- #
 
@@ -412,13 +340,7 @@ def walks(smiles, target_num):
     # Remove duplicates and the initial SMILES from the analogs list
     analogs = [mol for mol in analogs if mol is not None and Chem.MolToSmiles(mol) != smiles]
 
-    # Enumerate isomers for the analogs
-    isomer_analogs = []
-    for analog in analogs:
-        isomers = stereoisomerism(Chem.MolToSmiles(analog, isomericSmiles=True))
-        isomer_analogs.extend(isomers)
-    return isomer_analogs
-
+    return analogs
 
 def heterocycle_walks(smiles):
     """Performs Heterocycle Walks On Parent Molecule"""
@@ -435,12 +357,7 @@ def heterocycle_walks(smiles):
     # Remove duplicates and the initial SMILES from the analogs list
     analogs = [mol for mol in analogs if Chem.MolToSmiles(mol) != smiles]
 
-    # Enumerate isomers for the analogs
-    isomer_analogs = []
-    for analog in analogs:
-        isomers = stereoisomerism(Chem.MolToSmiles(analog,isomericSmiles=True))
-        isomer_analogs.extend(isomers)
-    return isomer_analogs
+    return analogs
 
 
 # Functions to perform specific walking methods
@@ -503,12 +420,7 @@ def scanning(smiles, fragments):
 
     analogs = [Chem.MolFromSmiles(analog_smiles) for analog_smiles in analogs]
 
-    # Enumerate isomers for the analogs
-    isomer_analogs = []
-    for analog in analogs:
-        isomers = stereoisomerism(Chem.MolToSmiles(analog, isomericSmiles=True))
-        isomer_analogs.extend(isomers)
-    return isomer_analogs
+    return analogs
 
 
 # Functions to perform specific scanning methods
@@ -585,8 +497,8 @@ def main():
     ]
 
     # Specify the input and output file names
-    path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/'
-    smiles_input_filename = 'rings.smi'
+    path = '/mnt/nfs/home/nlevinzon/analog_gen/'
+    smiles_input_filename = 'test.smi'
     output_file_prefix = "pKa"
 
     # Define the list of parent SMILES to take pictures of
@@ -620,7 +532,7 @@ def main():
                         if not analog_smiles:
                             raise ValueError(f"Invalid SMILES: {analog_smiles}")
                         if analog_smiles not in all_analogs:
-                            fakezinc = str(smiles) + "_analog"+ str(analog_count).zfill(4)
+                            fakezinc = "_analog"+ str(analog_count).zfill(4)
                             lines_out.append(f"{analog_smiles} {fakezinc}")
                             analog_key_scan[1].append([analog_smiles, fakezinc])
                             all_analogs.append(analog_smiles)
