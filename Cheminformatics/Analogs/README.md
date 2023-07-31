@@ -1,6 +1,6 @@
 “Python code built on top of RDKit that generates analogs for an input .SMI and writes them to an output .SMI"
-Usage: $python3 Analogs.py -i input.smi -o output
-## Background:
+* Usage: $python3 Analogs.py -i input.smi -o output
+# Background:
 The basis for these programs originates from the notion of “Chemical Space Travel.” In 2007, work published by van Deursen and Reymond reported a “spaceship” program which travels from a starting molecule A to a target molecule B through a continuum of structural mutations, and thereby charts unexplored chemical space. To enable movement in an unexplored chemical space and the discovery of new structures, the authors describe chemical space as a structural continuum. Rather than referring to proximity in property space, the authors defined a finite set of “Nearest Neighbor Mutations” related through a single structural mutation : Atom Type Exchange, Atom Inversion, Atom Removal, Atom Addition, Bond Saturation, Bond Unsaturation, Bond Rearrangement, and Aromatic Ring Addition. This description organizes chemical space as a graph in which nodes represent molecules and edges represent mutations. In theory, one can go from any Molecule A to any Molecule B in a finite time by simply applying the correct series Nearest Neighbor Mutations to Molecule A sequentially. The original Analogs.py and Analog_Methods.py programs were built on top of RDKit and designed to perform this Nearest Neighbor Mutation analog procedure for molecules specified in a .SMI file.
 # Analogs.py:
 Analogs.py wraps Analog_Methods.py and serves as the location to which most user adjustments can be made. The most important user adjustment is the analog_methods list in main(). Here, all of the Nearest Neighbor Mutations are specified:
@@ -39,11 +39,11 @@ analog_methods = [
 ```
 Once the analog_methods list has been adjusted, the code can be run on the command line. In order for the code to run, do the following:
 * Both Analogs.py and Analog_Methods.py need to be in the same directory
-* * As of 7/31/23, you can source the code here: /mnt/nfs/home/nlevinzon/analog_gen/new
+  * As of 7/31/23, you can source the code here: /mnt/nfs/home/nlevinzon/analog_gen/new
 * The code must be run in a location supporting Python3
-* * As of 7/31/23, I am using Gimel2
+  * As of 7/31/23, I am using Gimel2
 * A Python Environment containing RDKit must be sourced
-* * As of 7/31/23, you can source my Python Environment:
+  * As of 7/31/23, you can source my Python Environment:
 ```
 source ./mnt/nfs/home/nlevinzon/bashrc.env
 conda activate venv
