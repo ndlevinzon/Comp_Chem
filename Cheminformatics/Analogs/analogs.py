@@ -53,14 +53,16 @@ def main():
     smiles_zinc_input = pd.read_csv(os.path.join(path, smi_input_filename),
                                     sep=' ', header=None, names=['Smiles', 'ZincID'])
 
-    # Create a dictionary to store the analogs for each input SMILES code
+    # Create a dictionary to store the analogs for each input SMILES code and their zinc IDs
     all_analogs_dict = defaultdict(set)  # Use sets for analogs
 
     # Loop through each input molecule
-    total_analogs_count = 0
     for _, row in smiles_zinc_input.iterrows():
         smiles = row['Smiles']
         zinc_id = row['ZincID']
+
+        # Initialize the counter for each parent compound (reset to zero for each parent)
+        analogs_count = 0
 
         # Loop through each analogue method for the current input molecule
         for method in analog_methods:
@@ -74,22 +76,22 @@ def main():
                             analog_smiles = Chem.MolToSmiles(analog, isomericSmiles=True)
                             if not analog_smiles:
                                 raise ValueError(f"Invalid SMILES: {analog_smiles}")
-                            # Add analog to the set
-                            all_analogs_dict[smiles].add(analog_smiles)
-                            total_analogs_count += 1
+                            # Add analog to the set and store zinc ID
+                            all_analogs_dict[smiles].add((analog_smiles, zinc_id))
+                            analogs_count += 1
                             # Print analog SMILES and create fakezinc inside the loop
-                            fakezinc = zinc_id + "_analog" + str(total_analogs_count).zfill(4)
+                            fakezinc = zinc_id + "_analog" + str(analogs_count).zfill(4)
                             print(analog_smiles, fakezinc)
                         else:
                             for isomer in stereoisomers:
                                 analog_smiles = Chem.MolToSmiles(isomer, isomericSmiles=True)
                                 if not analog_smiles:
                                     raise ValueError(f"Invalid SMILES: {analog_smiles}")
-                                # Add analog to the set
-                                all_analogs_dict[smiles].add(analog_smiles)
-                                total_analogs_count += 1
+                                # Add analog to the set and store zinc ID
+                                all_analogs_dict[smiles].add((analog_smiles, zinc_id))
+                                analogs_count += 1
                                 # Print analog SMILES and create fakezinc inside the loop
-                                fakezinc = zinc_id + "_analog"
+                                fakezinc = zinc_id + "_analog" + str(analogs_count).zfill(4)
                                 print(analog_smiles, fakezinc)
                     except ValueError as e:
                         print(str(e))  # Skip the entry and print the error message
@@ -99,17 +101,20 @@ def main():
                 continue
 
     # Write the generated smiles and fake zincs to a file
+    total_analogs_count = 0
     output_file = os.path.join(path,
                                f"{output_file_prefix}-analogs-i{len(smiles_zinc_input)}-o{(sum(len(analogs) for _, analogs in all_analogs_dict.items()))}.smi")
+    print(f"Writing to {output_file}")
     with open(output_file, "w") as f2:
         for _, row in smiles_zinc_input.iterrows():
             smiles = row['Smiles']
             zinc_id = row['ZincID']
             f2.write(f"{smiles} {zinc_id}\n")
-            for analog_smiles in all_analogs_dict[smiles]:
-                total_analogs_count += 1
-                fakezinc = zinc_id + "_analog" + str(total_analogs_count).zfill(4)
+            parent_analogs = all_analogs_dict[smiles]
+            for i, (analog_smiles, parent_zinc_id) in enumerate(parent_analogs, start=1):
+                fakezinc = parent_zinc_id + "_analog" + str(i).zfill(4)
                 f2.write(f"{analog_smiles} {fakezinc}\n")
+                total_analogs_count += 1
 
     # Calculate the number of analogs generated
     print(f"Molecules: {total_analogs_count} molecules")
