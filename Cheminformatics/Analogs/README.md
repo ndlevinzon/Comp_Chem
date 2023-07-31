@@ -20,8 +20,9 @@ Ring_Maker: Enumerates Terminal -CH3, Finds Paths Of Length (4, 5) And Forms Rin
 Walks: Performs Walks On Parent Molecule
 Scans: Performs Scans On Parent Molecule
 ```
-Note: A ‘Scan’ replaces hydrogens in a X-H bond with R, forming X-R. A ‘Walk’ replaces a heavy atom in a X-H bond with R, forming R-H.
-Note: Some mutations (like some ‘Walks’ and ‘Scans’) produce more conservative changes when generating analogs, while other mutations (like ‘Ring_Breaker’) have the potential to generate analogs very different from the starting compound. To control for this, the analogging methods performed can be specified simply by commenting lines (using the ‘#’ character) containing unwanted operations in the analog_methods list. For example, if I only wanted the generator to produce analogs from halogen scans (F, Cl, Br, and I), my analog_methods list would look like: 	
+* Note: A ‘Scan’ replaces hydrogens in a X-H bond with R, forming X-R. A ‘Walk’ replaces a heavy atom in a X-H bond with R, forming R-H.
+* Note: Some mutations (like some ‘Walks’ and ‘Scans’) produce more conservative changes when generating analogs, while other mutations (like ‘Ring_Breaker’) have the potential to generate analogs very different from the starting compound.
+To control for this, the analogging methods performed can be specified simply by commenting lines (using the ‘#’ character) containing unwanted operations in the analog_methods list. For example, if I only wanted the generator to produce analogs from halogen scans (F, Cl, Br, and I), my analog_methods list would look like: 	
 ```
 analog_methods = [
     	# [trim_extremities, "trim"],
