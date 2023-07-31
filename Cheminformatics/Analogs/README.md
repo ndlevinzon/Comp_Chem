@@ -75,3 +75,4 @@ def new_method(smiles):
 	# Return analogs as RWMol objects
 	return analogs
 ```
+## SMI_Filter.py
