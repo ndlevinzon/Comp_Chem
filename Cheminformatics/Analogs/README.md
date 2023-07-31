@@ -1,9 +1,10 @@
 “Python code built on top of RDKit that generates analogs for an input .SMI and writes them to an output .SMI"
-## Usage: $python3 Analogs.py -i input.smi -o output
+Usage: $python3 Analogs.py -i input.smi -o output
 ## Background:
-	The basis for these programs originates from the notion of “Chemical Space Travel.” In 2007, work published by van Deursen and Reymond reported a “spaceship” program which travels from a starting molecule A to a target molecule B through a continuum of structural mutations, and thereby charts unexplored chemical space. To enable movement in an unexplored chemical space and the discovery of new structures, the authors describe chemical space as a structural continuum. Rather than referring to proximity in property space, the authors defined a finite set of “Nearest Neighbor Mutations” related through a single structural mutation : Atom Type Exchange, Atom Inversion, Atom Removal, Atom Addition, Bond Saturation, Bond Unsaturation, Bond Rearrangement, and Aromatic Ring Addition. This description organizes chemical space as a graph in which nodes represent molecules and edges represent mutations. In theory, one can go from any Molecule A to any Molecule B in a finite time by simply applying the correct series Nearest Neighbor Mutations to Molecule A sequentially. The original Analogs.py and Analog_Methods.py programs were built on top of RDKit and designed to perform this Nearest Neighbor Mutation analog procedure for molecules specified in a .SMI file.
+The basis for these programs originates from the notion of “Chemical Space Travel.” In 2007, work published by van Deursen and Reymond reported a “spaceship” program which travels from a starting molecule A to a target molecule B through a continuum of structural mutations, and thereby charts unexplored chemical space. To enable movement in an unexplored chemical space and the discovery of new structures, the authors describe chemical space as a structural continuum. Rather than referring to proximity in property space, the authors defined a finite set of “Nearest Neighbor Mutations” related through a single structural mutation : Atom Type Exchange, Atom Inversion, Atom Removal, Atom Addition, Bond Saturation, Bond Unsaturation, Bond Rearrangement, and Aromatic Ring Addition. This description organizes chemical space as a graph in which nodes represent molecules and edges represent mutations. In theory, one can go from any Molecule A to any Molecule B in a finite time by simply applying the correct series Nearest Neighbor Mutations to Molecule A sequentially. The original Analogs.py and Analog_Methods.py programs were built on top of RDKit and designed to perform this Nearest Neighbor Mutation analog procedure for molecules specified in a .SMI file.
 # Analogs.py:
-	Analogs.py wraps Analog_Methods.py and serves as the location to which most user adjustments can be made. The most important user adjustment is the analog_methods list in main(). Here, all of the Nearest Neighbor Mutations are specified:
+Analogs.py wraps Analog_Methods.py and serves as the location to which most user adjustments can be made. The most important user adjustment is the analog_methods list in main(). Here, all of the Nearest Neighbor Mutations are specified:
+ ```
 Trim_Extremities: Trim Parent Molecule Extremity Atoms One At A Time if M.W. > 500 Da
 BO_Stepup: Recursively Increases Bond Order Until Maximum Conjugation
 BO_Stepdown: Decreases Bond Order of Non-Single Bonds
@@ -11,8 +12,9 @@ Ring_Breaker: Enumerates Rings In Parent And Opens Rings
 Ring_Maker: Enumerates Terminal -CH3, Finds Paths Of Length (4, 5) And Forms Rings With SP3 Carbons On Path
 Walks: Performs Walks On Parent Molecule
 Scans: Performs Scans On Parent Molecule
+```
 Note: A ‘Scan’ replaces hydrogens in a X-H bond with R, forming X-R. A ‘Walk’ replaces a heavy atom in a X-H bond with R, forming R-H.
-Note that some mutations (like some ‘Walks’ and ‘Scans’) produce more conservative changes when generating analogs, while other mutations (like ‘Ring_Breaker’) have the potential to generate analogs very different from the starting compound. To control for this, the analogging methods performed can be specified simply by commenting lines (using the ‘#’ character) containing unwanted operations in the analog_methods list. For example, if I only wanted the generator to produce analogs from halogen scans (F, Cl, Br, and I), my analog_methods list would look like: 	
+Note: Some mutations (like some ‘Walks’ and ‘Scans’) produce more conservative changes when generating analogs, while other mutations (like ‘Ring_Breaker’) have the potential to generate analogs very different from the starting compound. To control for this, the analogging methods performed can be specified simply by commenting lines (using the ‘#’ character) containing unwanted operations in the analog_methods list. For example, if I only wanted the generator to produce analogs from halogen scans (F, Cl, Br, and I), my analog_methods list would look like: 	
 ```
 analog_methods = [
     	# [trim_extremities, "trim"],
@@ -50,7 +52,7 @@ Once this has been completed, you can run the analog generator on the command li
 Currently, the code run on the command line in Gimel2 produces ~250 molecules/second.
 
 # Analog_Methods.py
-	Analog_Methods.py contains the actual operations specified as Nearest Neighbor Mutation. Here you can adjust the specifics of each method currently implemented, as well add new ones. When developing new methods, the following paradigm should be used:
+Analog_Methods.py contains the actual operations specified as Nearest Neighbor Mutation. Here you can adjust the specifics of each method currently implemented, as well add new ones. When developing new methods, the following paradigm should be used:
 ```
 def new_method(smiles):
 	"""Describe your new method"""
