@@ -41,11 +41,11 @@ analog_methods = [
 ```
 Once the analog_methods list has been adjusted, the code can be run on the command line. In order for the code to run, do the following:
 * Both Analogs.py and Analog_Methods.py need to be in the same directory
-** As of 7/31/23, you can source the code here: /mnt/nfs/home/nlevinzon/analog_gen/new
+As of 7/31/23, you can source the code here: /mnt/nfs/home/nlevinzon/analog_gen/new
 * The code must be run in a location supporting Python3
-** As of 7/31/23, I am using Gimel2
+As of 7/31/23, I am using Gimel2
 * A Python Environment containing RDKit must be sourced
-** As of 7/31/23, you can source my Python Environment:
+As of 7/31/23, you can source my Python Environment:
 ```
 source ./mnt/nfs/home/nlevinzon/bashrc.env
 conda activate venv
