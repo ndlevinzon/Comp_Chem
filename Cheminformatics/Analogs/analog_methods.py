@@ -1,4 +1,5 @@
-# Nathan Levinzon, Jonathan Borowsky, and Olivier Mailhot  UCSF 2023
+# Nathan Levinzon, Jonathan Borowsky, and Olivier Mailhot | UCSF 2023
+# Version 1.0
 import pickle
 import time
 import re
@@ -18,7 +19,7 @@ def trim_extremities(smiles):
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
     if not mol:
-        raise ValueError(f"Invalid SMILES: {smiles}")
+        return []
 
     # Calculate the molecular weight of the parent molecule
     mw = Descriptors.MolWt(mol)
@@ -26,6 +27,7 @@ def trim_extremities(smiles):
     # Exit the function if the molecular weight is less than or equal to 500 Da
     if mw <= 500:
         return []
+
     analogs = []
 
     # Adjust valence of the molecule
@@ -67,7 +69,8 @@ def BO_stepup(smiles):
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
     if not mol:
-        raise ValueError(f"Invalid SMILES: {smiles}")
+        return []
+
     analogs = []
 
     # Adjust valence of the molecule
@@ -130,7 +133,8 @@ def BO_stepdown(smiles):
         """Converts SMILES into a representation with explicit bond notation"""
         mol = Chem.MolFromSmiles(smiles)
         if not mol:
-            raise ValueError(f"Invalid SMILES: {smiles}")
+            return []
+
         Chem.Kekulize(mol)  # Ensure explicit bond notation
         return Chem.MolToSmiles(mol, kekuleSmiles=True)
 
@@ -161,11 +165,13 @@ def BO_stepdown(smiles):
     explicit_smiles = convert_to_explicit_bonds(smiles)
     bond_indices = [i for i, symbol in enumerate(explicit_smiles) if symbol in ("#", "=")]
     analogs_smiles = decrease_bond_order_recursive(explicit_smiles, bond_indices)
+
     # Remove duplicates and the initial SMILES from the analogs list
     analogs_smiles = list(set(analogs_smiles) - {smiles})
     analogs = [Chem.MolFromSmiles(smiles) for smiles in analogs_smiles]
 
     return analogs
+
 
 # --------------------------Ring Changes-------------------------- #
 
@@ -174,7 +180,8 @@ def ring_breaker(smiles):
     # Create the molecule from SMILES
     mol = Chem.MolFromSmiles(smiles)
     if not mol:
-        raise ValueError(f"Invalid SMILES: {smiles}")
+        return []
+
     analogs = []
 
     # Disable kekulization
@@ -237,7 +244,8 @@ def ring_maker(smiles):
     # Create the molecule from SMILES
     mol = Chem.MolFromSmiles(smiles)
     if not mol:
-        raise ValueError(f"Invalid SMILES: {smiles}")
+        return []
+
     analogs = []
 
     # Adjust valence of the molecule
@@ -316,9 +324,8 @@ def walks(smiles, target_num):
     """Performs Walks On Parent Molecule"""
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
-        raise ValueError(f"Invalid SMILES: {smiles}")
+        return []
 
-    # Create a copy of the molecule for modification
     analogs = []
 
     for atom in mol.GetAtoms():
@@ -346,7 +353,8 @@ def heterocycle_walks(smiles):
     """Performs Heterocycle Walks On Parent Molecule"""
     mol = Chem.MolFromSmiles(smiles)
     if not mol:
-        raise ValueError(f"Invalid SMILES: {smiles}")
+        return []
+
     analogs = []
 
     # Enumerate heterocycles and append RWMol objects to analogs list
@@ -375,7 +383,8 @@ def sulfur_walks(smiles): return walks(smiles, target_num=16)
 def scanning(smiles, fragments):
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
-        raise ValueError(f"Invalid SMILES: {smiles}")
+        return []
+
     mol = Chem.AddHs(mol)
 
     analogs = set()  # Use a set to store unique analogs
@@ -475,14 +484,14 @@ def enumerate_stereoisomers(mol):
                              or None if there are no stereoisomers to enumerate.
     """
     if mol is None:
-        raise ValueError("Invalid input RWMol object.")
+        return []
 
     # Find all stereocenters in the molecule
     stereo_centers = [atom.GetIdx() for atom in mol.GetAtoms() if atom.HasProp('_ChiralityPossible')]
 
     # If there are no stereocenters, return None
     if not stereo_centers:
-        return None
+        return []
 
     # Enumerate all possible combinations of stereo configurations
     num_stereo_centers = len(stereo_centers)
