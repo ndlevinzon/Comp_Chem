@@ -9,8 +9,7 @@ from analog_methods import *
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Generate analogs from a .smi file.")
-    parser.add_argument("-i", "--input", type=str, required=True, help="Input SMILES file name.")
-    parser.add_argument("-o", "--output", type=str, required=True, help="Output file prefix.")
+    parser.add_argument("-i", "--input", type=str, required=True, help="Input SMI file name.")
     return parser.parse_args()
 
 
@@ -103,7 +102,7 @@ def main():
     # Write the generated smiles and fake zincs to a file
     total_analogs_count = 0
     output_file = os.path.join(path,
-                               f"{output_file_prefix}-analogs-i{len(smiles_zinc_input)}-o{(sum(len(analogs) for _, analogs in all_analogs_dict.items()))}.smi")
+                               f"-analogs-i{len(smiles_zinc_input)}-o{(sum(len(analogs) for _, analogs in all_analogs_dict.items()))}.smi")
     print(f"Writing to {output_file}")
     with open(output_file, "w") as f2:
         for _, row in smiles_zinc_input.iterrows():
