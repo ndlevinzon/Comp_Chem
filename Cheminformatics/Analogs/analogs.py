@@ -1,4 +1,5 @@
 # Nathan Levinzon, Jonathan Borowsky, and Olivier Mailhot | UCSF 2023
+# Version 1.0
 import argparse
 import time
 import os
