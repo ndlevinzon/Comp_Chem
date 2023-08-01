@@ -68,7 +68,9 @@ def new_method(smiles):
 	# Convert the SMILES code to a molecule object
 	mol = Chem.MolFromSmiles(smiles)
 	if not mol:
-    		raise ValueError(f"Invalid SMILES: {smiles}")
+    		return []
+
+	analogs = []
 
 	# Specify new operations
 	# …
