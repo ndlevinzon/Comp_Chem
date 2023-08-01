@@ -1,4 +1,4 @@
-# Nathan Levinzon, Jonathan Borowsky, and Olivier Mailhot  UCSF 2023
+# Nathan Levinzon, Jonathan Borowsky, and Olivier Mailhot | UCSF 2023
 # Non-refactored Version
 import time
 import re
@@ -12,14 +12,13 @@ from rdkit.Chem.EnumerateHeterocycles import EnumerateHeterocycles
 
 # --------------------------Extremity Trimmer-------------------------- #
 
-
 def trim_extremities(smiles):
     """Trim Parent Molecule Extremity Atoms One At A Time if M.W. > 500 Da"""
 
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
     if not mol:
-        raise ValueError(f"Invalid SMILES: {smiles}")
+        return []
 
     # Calculate the molecular weight of the parent molecule
     mw = Descriptors.MolWt(mol)
@@ -27,6 +26,7 @@ def trim_extremities(smiles):
     # Exit the function if the molecular weight is less than or equal to 500 Da
     if mw <= 500:
         return []
+
     analogs = []
 
     # Adjust valence of the molecule
@@ -68,7 +68,8 @@ def BO_stepup(smiles):
     # Convert the SMILES code to a molecule object
     mol = Chem.MolFromSmiles(smiles)
     if not mol:
-        raise ValueError(f"Invalid SMILES: {smiles}")
+        return []
+
     analogs = []
 
     # Adjust valence of the molecule
@@ -131,7 +132,8 @@ def BO_stepdown(smiles):
         """Converts SMILES into a representation with explicit bond notation"""
         mol = Chem.MolFromSmiles(smiles)
         if not mol:
-            raise ValueError(f"Invalid SMILES: {smiles}")
+            return []
+
         Chem.Kekulize(mol)  # Ensure explicit bond notation
         return Chem.MolToSmiles(mol, kekuleSmiles=True)
 
@@ -162,11 +164,13 @@ def BO_stepdown(smiles):
     explicit_smiles = convert_to_explicit_bonds(smiles)
     bond_indices = [i for i, symbol in enumerate(explicit_smiles) if symbol in ("#", "=")]
     analogs_smiles = decrease_bond_order_recursive(explicit_smiles, bond_indices)
+
     # Remove duplicates and the initial SMILES from the analogs list
     analogs_smiles = list(set(analogs_smiles) - {smiles})
     analogs = [Chem.MolFromSmiles(smiles) for smiles in analogs_smiles]
 
     return analogs
+
 
 # --------------------------Ring Changes-------------------------- #
 
@@ -175,7 +179,8 @@ def ring_breaker(smiles):
     # Create the molecule from SMILES
     mol = Chem.MolFromSmiles(smiles)
     if not mol:
-        raise ValueError(f"Invalid SMILES: {smiles}")
+        return []
+
     analogs = []
 
     # Disable kekulization
@@ -233,13 +238,13 @@ def ring_breaker(smiles):
     return analogs
 
 
-
 def ring_maker(smiles):
     """Enumerates Terminal -CH3, Finds Paths Of Length (4, 5) And Forms Rings With sp3 Carbons On Path"""
     # Create the molecule from SMILES
     mol = Chem.MolFromSmiles(smiles)
     if not mol:
-        raise ValueError(f"Invalid SMILES: {smiles}")
+        return []
+
     analogs = []
 
     # Adjust valence of the molecule
@@ -312,15 +317,14 @@ def ring_maker(smiles):
 
     return analogs
 
-# --------------------------Atom Walks-------------------------- #
+# --------------------------Walks-------------------------- #
 
 def walks(smiles, target_num):
     """Performs Walks On Parent Molecule"""
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
-        raise ValueError(f"Invalid SMILES: {smiles}")
+        return []
 
-    # Create a copy of the molecule for modification
     analogs = []
 
     for atom in mol.GetAtoms():
@@ -348,7 +352,8 @@ def heterocycle_walks(smiles):
     """Performs Heterocycle Walks On Parent Molecule"""
     mol = Chem.MolFromSmiles(smiles)
     if not mol:
-        raise ValueError(f"Invalid SMILES: {smiles}")
+        return []
+
     analogs = []
 
     # Enumerate heterocycles and append RWMol objects to analogs list
@@ -367,16 +372,18 @@ def heterocycle_walks(smiles):
     return analogs
 
 # Functions to perform specific walking methods
+
 def nitrogen_walks(smiles): return walks(smiles, target_num=7)
 def oxygen_walks(smiles): return walks(smiles, target_num=8)
 def sulfur_walks(smiles): return walks(smiles, target_num=16)
 
-# --------------------------Atom Scans-------------------------- #
+# --------------------------Scans-------------------------- #
 
 def scanning(smiles, fragments):
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
-        raise ValueError(f"Invalid SMILES: {smiles}")
+        return []
+
     mol = Chem.AddHs(mol)
 
     analogs = set()  # Use a set to store unique analogs
@@ -428,8 +435,8 @@ def scanning(smiles, fragments):
 
     return analogs
 
-
 # Functions to perform specific scanning methods
+
 def methyl_scanning(smiles): return scanning(smiles, ['C'])
 def amine_scanning(smiles): return scanning(smiles, ['N'])
 def hydroxyl_scanning(smiles): return scanning(smiles, ['O'])
@@ -476,14 +483,14 @@ def enumerate_stereoisomers(mol):
                              or None if there are no stereoisomers to enumerate.
     """
     if mol is None:
-        raise ValueError("Invalid input RWMol object.")
+        return []
 
     # Find all stereocenters in the molecule
     stereo_centers = [atom.GetIdx() for atom in mol.GetAtoms() if atom.HasProp('_ChiralityPossible')]
 
     # If there are no stereocenters, return None
     if not stereo_centers:
-        return None
+        return []
 
     # Enumerate all possible combinations of stereo configurations
     num_stereo_centers = len(stereo_centers)
@@ -535,26 +542,27 @@ def main():
     ]
 
     # Specify the input and output file names
-    path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/'
-    smiles_input_filename = 'jk_ampc_ligands.smi'
+    path = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/alpha2a/'
+    smiles_input_filename = 'alpha_2a_ligands.smi'
     output_file_prefix = "jk_test"
 
     # Read the input file and store the smiles and zinc IDs in a DataFrame
     smiles_zinc_input = pd.read_csv(f'{path}{smiles_input_filename}', sep=' ', header=None, names=['Smiles', 'ZincID'])
 
-    # Create a dictionary to store the analogs for each input SMILES code
+    # Create a dictionary to store the analogs for each input SMILES code and their zinc IDs
     all_analogs_dict = defaultdict(set)  # Use sets for analogs
 
     # Loop through each input molecule
-    total_analogs_count = 0
     for _, row in smiles_zinc_input.iterrows():
         smiles = row['Smiles']
         zinc_id = row['ZincID']
 
+        # Initialize the counter for each parent compound (reset to zero for each parent)
+        analogs_count = 0
+
         # Loop through each analogue method for the current input molecule
         for method in analog_methods:
             # Generate analogues using the specified method
-            try:
                 for analog in method[0](smiles):
                     try:
                         # Enumerate stereoisomers for the current analog
@@ -563,41 +571,41 @@ def main():
                             analog_smiles = Chem.MolToSmiles(analog, isomericSmiles=True)
                             if not analog_smiles:
                                 raise ValueError(f"Invalid SMILES: {analog_smiles}")
-                            # Add analog to the set
-                            all_analogs_dict[smiles].add(analog_smiles)
-                            total_analogs_count += 1
+                            # Add analog to the set and store zinc ID
+                            all_analogs_dict[smiles].add((analog_smiles, zinc_id))
+                            analogs_count += 1
                             # Print analog SMILES and create fakezinc inside the loop
-                            fakezinc = zinc_id + "_analog" + str(total_analogs_count).zfill(4)
+                            fakezinc = str(zinc_id) + "_analog" + str(analogs_count).zfill(4)
                             print(analog_smiles, fakezinc)
                         else:
                             for isomer in stereoisomers:
                                 analog_smiles = Chem.MolToSmiles(isomer, isomericSmiles=True)
                                 if not analog_smiles:
                                     raise ValueError(f"Invalid SMILES: {analog_smiles}")
-                                # Add analog to the set
-                                all_analogs_dict[smiles].add(analog_smiles)
-                                total_analogs_count += 1
+                                # Add analog to the set and store zinc ID
+                                all_analogs_dict[smiles].add((analog_smiles, zinc_id))
+                                analogs_count += 1
                                 # Print analog SMILES and create fakezinc inside the loop
-                                fakezinc = zinc_id + "_analog"
+                                fakezinc = str(zinc_id) + "_analog" + str(analogs_count).zfill(4)
                                 print(analog_smiles, fakezinc)
                     except ValueError as e:
                         print(str(e))  # Skip the entry and print the error message
                         continue  # Skip to the next iteration
-            except Exception as e:
-                print(f"Error generating analogs: {str(e)}")
-                continue
 
     # Write the generated smiles and fake zincs to a file
+    total_analogs_count = 0
     output_file = f"{path}{output_file_prefix}-analogs-i{len(smiles_zinc_input)}-o{(sum(len(analogs) for _, analogs in all_analogs_dict.items()))}.smi"
+    print(f"Writing to {output_file}")
     with open(output_file, "w") as f2:
         for _, row in smiles_zinc_input.iterrows():
             smiles = row['Smiles']
             zinc_id = row['ZincID']
             f2.write(f"{smiles} {zinc_id}\n")
-            for analog_smiles in all_analogs_dict[smiles]:
-                total_analogs_count += 1
-                fakezinc = zinc_id + "_analog" + str(total_analogs_count).zfill(4)
+            parent_analogs = all_analogs_dict[smiles]
+            for i, (analog_smiles, parent_zinc_id) in enumerate(parent_analogs, start=1):
+                fakezinc = str(parent_zinc_id) + "_analog" + str(i).zfill(4)
                 f2.write(f"{analog_smiles} {fakezinc}\n")
+                total_analogs_count += 1
 
     # Calculate the number of analogs generated
     print(f"Molecules: {total_analogs_count} molecules")
@@ -608,7 +616,7 @@ def main():
     print(f"Runtime: {elapsed_time} seconds")
 
     # Calculate molecules generated per second
-    benchmark = float(sum(len(analogs) for _, analogs in all_analogs_dict.items())) / elapsed_time
+    benchmark = total_analogs_count / elapsed_time
     print(f"Benchmark: {benchmark} molecules/second")
 
 
