@@ -6,7 +6,7 @@ import os
 import pandas as pd
 from rdkit import RDLogger
 from collections import defaultdict
-from analog_methods import *
+from Analog_Methods import *
 
 
 def parse_arguments():
