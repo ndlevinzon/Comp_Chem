@@ -8,7 +8,7 @@ Work Cited:
 ## Analogs.py:
 Usage: 
 ```
-$python3 Analogs.py -i input.smi -o output
+$python3 Analogs.py -i input.smi
 ```
 Analogs.py wraps Analog_Methods.py and serves as the location to which most user adjustments can be made. The most important user adjustment is the analog_methods list in main(). Here, all of the Nearest Neighbor Mutations are specified:
  ```
