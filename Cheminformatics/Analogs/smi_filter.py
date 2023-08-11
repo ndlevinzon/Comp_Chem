@@ -1,14 +1,24 @@
 import os
 import pandas as pd
 import subprocess
+import argparse
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Filters .SMI file for pKa/b and Lipinski RO5")
+    parser.add_argument("-i", "--input", type=str, required=True, help="Input SMI file name.")
+    return parser.parse_args()
 
 
 def main():
     # Get the current working directory
     current_directory = os.getcwd()
 
+    # Get command-line arguments
+    args = parse_arguments()
+
     # Define the input file path
-    smi_filename = 'pKa-analogs-i1-o90.smi'  # Replace this with your actual file name or path
+    smi_filename = args.input
     input_file = os.path.join(current_directory, smi_filename)
     print(f'Input File: {input_file}')
 
@@ -37,7 +47,7 @@ def pKa(input_file, cxcalc_output):
     df_smi = pd.read_csv(input_file, sep=' ', header=None, names=['smiles_codes', 'zinc_codes'])
     print(df_smi)
 
-    # Run cxcalc operation
+    # Run cxcalc operation (CLI, change path to chemaxon if needed)
     cxcalc_cmd = f'/mnt/nfs/home/nlevinzon/freechem/freechem-19.15.r4/bin/cxcalc -i smiles {input_file} logP pKa > {cxcalc_output}'
     subprocess.run(cxcalc_cmd, shell=True)
 
@@ -77,7 +87,7 @@ def pKa(input_file, cxcalc_output):
 
 
 def RO5(df_cxcalc, input_file, RO5_output):
-    # Run the RO5 evaluation
+    # Run the RO5 evaluation (CLI, change path to chemaxon if needed)
     RO5_cmd = \
         f'/mnt/nfs/home/nlevinzon/freechem/freechem-19.15.r4/bin/evaluate -e "mass() <= 500 && logP() <= 5 && donorCount() <= 5 && acceptorCount() <= 10 && rotatableBondCount() <= 10 && PSA() <= 140" {input_file} > {RO5_output}'
     subprocess.run(RO5_cmd, shell=True)
