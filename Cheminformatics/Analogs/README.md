@@ -82,11 +82,12 @@ def new_method(smiles):
 	return analogs
 ```
 ## SMI_Filter.py
-This application 
+This application is built on top of ChemAxon's CXCALC to take in a .SMI input and calculate each entry's pKa/b and Lipinski RO5
 Usage: 
 ```
->>python3 Analogs.py -i input.smi
+>>python3 smi_filter.py -i input.smi
 ```
+Before running this code, make sure that the line interacting with the CLI are pointing to a directory containing ChemAxon. Also, several temporary files will be generated in order to parse the .SMI and CXCALC outputs (ensure that your working directory has space and RW permissions)
 
 ## fix_broken_zinc.py
 Matches partial ZINC IDs from OUTDOCK with Analogs.py output
