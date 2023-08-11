@@ -1,11 +1,26 @@
 import pandas as pd
 from fuzzywuzzy import fuzz, process
+import argparse
+import os
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Completes truncated ZINC IDs from OUTDOCK using key from analogs.py")
+    parser.add_argument("-i", "--input", type=str, required=True, help="Input SMI file name.")
+    parser.add_argument("-k", "--key", type=str, required=True, help=".SMI output from analogs.py")
+    return parser.parse_args()
+
+# Get command-line arguments
+args = parse_arguments()
+
+# Get the current working directory
+current_directory = os.getcwd()
 
 # Load the first CSV file into a DataFrame
-df1 = pd.read_csv('C:/Users/ndlev/PycharmProjects/shoichet/analogs/ampc/fangyu/fangyu_extract_all.csv')
+df1 = pd.read_csv(os.path.join(current_directory, args.input))
 
 # Load the second CSV file into a DataFrame
-df2 = pd.read_csv('C:/Users/ndlev/PycharmProjects/shoichet/analogs/ampc/fangyu/fangyu_ampc_ligands.csv')
+df2 = pd.read_csv(os.path.join(current_directory, args.key))
 
 # Create an empty list to store the matched id_nums
 matched_id_nums = []
@@ -32,4 +47,4 @@ for index, row in df1.iterrows():
 df1['id_num_new'] = matched_id_nums
 
 # Save the updated DataFrame with the new column
-df1.to_csv('C:/Users/ndlev/PycharmProjects/shoichet/analogs/ampc/fangyu/fangyu_extract_all_fuzzy.csv', index=False)
+df1.to_csv((os.path.join(current_directory, args.input, '_fuzzy')), index=False)
