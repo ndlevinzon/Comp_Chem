@@ -82,3 +82,7 @@ def new_method(smiles):
 	return analogs
 ```
 ## SMI_Filter.py
+Filters for Lipinski RO5
+
+## fix_broken_zinc.py
+Matches partial ZINC IDs from OUTDOCK with Analogs.py output
