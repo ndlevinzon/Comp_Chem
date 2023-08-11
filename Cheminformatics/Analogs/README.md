@@ -82,6 +82,7 @@ def new_method(smiles):
 	return analogs
 ```
 ## SMI_Filter.py
+This application 
 Usage: 
 ```
 >>python3 Analogs.py -i input.smi
