@@ -90,4 +90,8 @@ Usage:
 Before running this code, make sure that the line interacting with the CLI are pointing to a directory containing ChemAxon. Also, several temporary files will be generated in order to parse the .SMI and CXCALC outputs (ensure that your working directory has space and RW permissions)
 
 ## fix_broken_zinc.py
-Matches partial ZINC IDs from OUTDOCK with Analogs.py output
+When building from an .SMI in the UCSF DOCK 3D building pipeline, sometimes the ZINC IDs get truncated when printing the OUTDOCK. These impartial ZINC IDs make grouping ligands by family difficult after docking is complete. In order to solve these partial ZINC_IDs, a "fuzzy sort" is implemented to replace the incomplete ZINC IDs from the OUTDOCK using the output of Analogs.py as a key.
+Usage: 
+```
+>>python3 fix_broken_zinc.py -i OUTDOCK.csv -k KEY.smi
+```
