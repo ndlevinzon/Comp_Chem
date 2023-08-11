@@ -28,9 +28,13 @@ def find_group_parents(group_df):
     return parent_indices
 
 
-def read_csv(csv_file, scalar=8.14E18):
+def read_csv(csv_file, scalar=1):
+    # Scalars:
+    # JK: 9.41E53
+    # Fangyu:
+    # Alpha2a: 8.14E18
     """
-    Read CSV file from ChEMBL Query and create a pandas DataFrame
+    Read CSV file from formatted OUTDOCK and create a pandas DataFrame
 
     Parameters:
     csv_file (str): Path to the CSV file
@@ -45,7 +49,7 @@ def read_csv(csv_file, scalar=8.14E18):
     df['Total'] = pd.to_numeric(df['Total'], errors='coerce')
 
     # Convert the potency units from nM to M by multiplying by 1e-9 and a scalar
-    df['Total_Converted'] = (np.exp(df['Total'] / (300 * 0.001987)))*scalar
+    df['Total_Converted'] = (np.exp((df['Total'] *scalar) / (300 * 0.001987)))
 
     # Apply the function to the 'id_num' column and create a new column 'group'
     df['GROUP'] = df['id_num'].apply(extract_group)
@@ -96,13 +100,12 @@ def read_csv(csv_file, scalar=8.14E18):
 
     print(df.head(10))
 
-    df.to_csv('C:/Users/ndlev/PycharmProjects/shoichet/analogs/ampc/fangyu/fangyu_grouped.csv', index=False)
+    df.to_csv('C:/Users/ndlev/PycharmProjects/shoichet/analogs/alpha2a/alpha2a_grouped.csv', index=False)
     # JK: 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/ampc/jk/jk_grouped.csv'
     # Fangyu: 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/ampc/fangyu/fangyu_grouped.csv'
     # Alpha2a: 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/alpha2a/alpha2a_grouped.csv'
 
     return df
-
 
 def create_scatter(df, subtitle):
     plt.figure()
@@ -113,15 +116,17 @@ def create_scatter(df, subtitle):
     x_data = df['Total_Converted']
     x_label = 'Calculated p(Ki) From UCSF DOCK 3.8'
 
+    # Generate a random color for each group
     unique_colors = ['#' + ''.join(random.choices('0123456789ABCDEF', k=6)) for _ in range(df['GROUP'].nunique())]
 
+    # Assign markers to denote parent ('*') and non-parent ('o') of a group
     for i, group_number in enumerate(df['GROUP'].unique()):
         group_data = df[df['GROUP'] == group_number]
 
         color = unique_colors[i]
         label = f'Group {group_number}'
 
-        plt.scatter(np.log(x_data[group_data.index]), y_data[group_data.index], color=color, marker='o', alpha=0.6, s=30,
+        plt.scatter(-np.log(x_data[group_data.index]), y_data[group_data.index], color=color, marker='o', alpha=0.6, s=30,
                     label=label)
 
         parent_index = group_data['Parent_Index'].values[0] if group_data['Parent_Index'].count() > 0 else None
@@ -129,7 +134,7 @@ def create_scatter(df, subtitle):
 
         if marker == '*' and parent_index is not None:
             parent_data = group_data[group_data.index == parent_index]
-            plt.scatter(np.log(x_data[parent_data.index]), y_data[parent_data.index], color=color, marker='*', alpha=0.8, s=100,
+            plt.scatter(-np.log(x_data[parent_data.index]), y_data[parent_data.index], color=color, marker='*', alpha=0.8, s=100,
                         label='Parent')
 
     plt.xscale("log")
@@ -138,23 +143,22 @@ def create_scatter(df, subtitle):
     plt.title("The Proportion of Improved Analogs as a Function of p(Ki)")
     plt.suptitle(subtitle)
     plt.ylim([0, 1])
-    plt.gca().invert_xaxis()  # Invert the x-axis
+    # plt.gca().invert_xaxis()  # Invert the x-axis
 
     plt.show()
 
 
-
 def main():
     # Source CSV (extract_all.py -> formatting in Excel ->)
-    csv_file = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/ampc/fangyu/fangyu_extract_all_fuzzy.csv'
+    csv_file = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/alpha2a/alpha2a_extract_all.csv'
     # JK: 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/ampc/jk/jk_extracted.csv'
     # Fangyu: 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/ampc/fangyu/fangyu_extract_all_fuzzy.csv'
     # Alpha2a: 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/alpha2a/alpha2a_extract_all.csv'
 
-    subtitle = 'E. A. Fink et al. (2022) DOI:10.1126/science.abn7065'
+    subtitle = 'Fink, E. A. et al. (2022) DOI:10.1126/science.abn7065'
     # JK: 'Lyu, J. et al. (2019) DOI: 10.1038/s41586-019-0917-9'
-    # Fangyu:
-    # Alpha2a: 'E. A. Fink et al. (2022) DOI:10.1126/science.abn7065'
+    # Fangyu: 'Liu, F. (2023) (unpublished)'
+    # Alpha2a: 'Fink, E. A. et al. (2022) DOI:10.1126/science.abn7065'
 
     # Read the new data from CSV
     df=read_csv(csv_file=csv_file)
