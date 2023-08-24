@@ -2,6 +2,7 @@ import re
 import random
 import pandas as pd
 import numpy as np
+from fuzzywuzzy import fuzz
 import matplotlib.pyplot as plt
 
 
@@ -11,6 +12,21 @@ def extract_group(input_string):
         return result.group(1)
     else:
         return None
+
+
+def find_best_parent_index(group_data):
+    best_similarity = 0
+    best_parent_index = None
+
+    for index, row in group_data.iterrows():
+        for parent_index, parent_row in group_data.iterrows():
+            if index != parent_index:
+                similarity = fuzz.ratio(row['id_num'], parent_row['id_num'])
+                if similarity > best_similarity:
+                    best_similarity = similarity
+                    best_parent_index = parent_index
+
+    return best_parent_index
 
 
 def find_group_parents(group_df):
@@ -24,6 +40,11 @@ def find_group_parents(group_df):
             parent_indices[group_id] = parent_index
         elif len(non_analog_entries) == 1:
             parent_indices[group_id] = non_analog_entries.index[0]
+        else:
+            # Call the find_best_parent_index function for groups without a clear parent
+            best_parent_index = find_best_parent_index(group_data)
+            if best_parent_index is not None:
+                parent_indices[group_id] = best_parent_index
 
     return parent_indices
 
@@ -49,7 +70,7 @@ def read_csv(csv_file, scalar=1):
     df['Total'] = pd.to_numeric(df['Total'], errors='coerce')
 
     # Convert the potency units from nM to M by multiplying by 1e-9 and a scalar
-    df['Total_Converted'] = (np.exp((df['Total'] *scalar) / (300 * 0.001987)))
+    df['Total_Converted'] = (np.exp((df['Total'] * scalar) / (300 * 0.001987)))
 
     # Apply the function to the 'id_num' column and create a new column 'group'
     df['GROUP'] = df['id_num'].apply(extract_group)
@@ -84,19 +105,16 @@ def read_csv(csv_file, scalar=1):
 
         for index in group_data.index:
             total_converted = group_data.loc[index, 'Total_Converted']
-            other_entries_lower = group_data[group_data['Total_Converted'] < total_converted]
 
-            if len(group_data) > 2:  # Modified condition to handle highest and lowest entries
-                if total_converted == min_total_converted:
-                    prop_improv = 0
-                elif total_converted == max_total_converted:
-                    prop_improv = 1
-                else:
-                    prop_improv = abs((len(other_entries_lower)) / (len(group_data)-2))
+            if total_converted == min_total_converted:
+                prop_improv = 0
+            elif total_converted == max_total_converted:
+                prop_improv = 1
             else:
-                prop_improv = np.nan
+                other_entries_lower = group_data[group_data['Total_Converted'] < total_converted]
+                prop_improv = abs((len(other_entries_lower)) / (len(group_data)-1))
 
-            df.at[index, 'PROP_IMPROV'] = format(prop_improv, ".3f")  # Format to three decimal places
+            df.at[index, 'PROP_IMPROV'] = float(prop_improv)  # Format to three decimal places
 
     print(df.head(10))
 
@@ -107,6 +125,25 @@ def read_csv(csv_file, scalar=1):
 
     return df
 
+
+def group_meets_criteria(group_data):
+    # Define your criteria here
+    # Check if the group has a PROP_IMRPOV with a value of 1,
+    # a PROP_IMPROV with a value of 0, and a single parent
+    # Return True if the group meets the criteria, else False
+    # Example:
+    return (1 in group_data['PROP_IMPROV'].values) and \
+           (0 in group_data['PROP_IMPROV'].values) and \
+           (len(group_data['Parent_Index'].dropna().unique()) == 1)
+
+
+def group_has_valid_parent(group_data, df):
+    # Define your criteria for a valid parent here
+    # Example: Check if the parent index is not null and exists in the DataFrame
+    parent_index = group_data['Parent_Index'].iloc[0]
+    return parent_index is not np.nan and parent_index in df.index
+
+
 def create_scatter(df, subtitle):
     plt.figure()
 
@@ -116,46 +153,68 @@ def create_scatter(df, subtitle):
     x_data = df['Total_Converted']
     x_label = 'Calculated p(Ki) From UCSF DOCK 3.8'
 
-    # Generate a random color for each group
-    unique_colors = ['#' + ''.join(random.choices('0123456789ABCDEF', k=6)) for _ in range(df['GROUP'].nunique())]
+    # # Scatter plot for all data points
+    # plt.scatter(-np.log(x_data), y_data, color='gray', marker='o', alpha=0.4, s=20, label='All Data Points')
 
-    # Assign markers to denote parent ('*') and non-parent ('o') of a group
-    for i, group_number in enumerate(df['GROUP'].unique()):
+    # Select the top five most populous groups
+    top_groups = df['GROUP'].value_counts().nlargest(5).index
+
+    # Generate a random color for each group
+    unique_colors = ['#' + ''.join(random.choices('0123456789ABCDEF', k=6)) for _ in range(len(top_groups))]
+
+    # Loop through each group
+    for i, group_number in enumerate(top_groups):
         group_data = df[df['GROUP'] == group_number]
 
-        color = unique_colors[i]
-        label = f'Group {group_number}'
+        # Check if the group meets the criteria and has a valid parent
+        if group_meets_criteria(group_data) and group_has_valid_parent(group_data, df):
+            color = unique_colors[i]
+            label = f'Group {group_number}'
 
-        plt.scatter(-np.log(x_data[group_data.index]), y_data[group_data.index], color=color, marker='o', alpha=0.6, s=30,
-                    label=label)
+            parent_indices = group_data['Parent_Index'].values
 
-        parent_index = group_data['Parent_Index'].values[0] if group_data['Parent_Index'].count() > 0 else None
-        marker = '*' if parent_index in group_data.index else 'o'  # Use '*' marker if the entry is a parent, 'o' otherwise
+            if parent_indices.size > 0:
+                parent_min_potency = float('inf')
+                min_potency_index = None
 
-        if marker == '*' and parent_index is not None:
-            parent_data = group_data[group_data.index == parent_index]
-            plt.scatter(-np.log(x_data[parent_data.index]), y_data[parent_data.index], color=color, marker='*', alpha=0.8, s=100,
-                        label='Parent')
+                # Find the instance of the parent with the lowest POTENCY_CONVERTED value
+                for parent_index in parent_indices:
+                    parent_data = group_data[group_data.index == parent_index]
 
-    plt.xscale("log")
+                    if not parent_data.empty:
+                        parent_potency = parent_data['Total_Converted'].values[0]
+
+                        if parent_potency < parent_min_potency:
+                            parent_min_potency = parent_potency
+                            min_potency_index = parent_index
+
+                if min_potency_index is not None:
+                    # Plot the parent with the lowest POTENCY_CONVERTED value as a star marker
+                    plt.scatter(-np.log(x_data[min_potency_index]), y_data[min_potency_index], color=color, marker='*',
+                                alpha=1, s=100, label='Parent')
+
+            # Plot other group members with 'o' marker
+            non_parent_indices = group_data.index.difference(parent_indices)
+            plt.scatter(-np.log(x_data[non_parent_indices]), y_data[non_parent_indices], color=color, marker='o', alpha=0.6,
+                        s=10, label=label)
+
+    plt.xscale('symlog')
     plt.xlabel(x_label)
     plt.ylabel(y_label)
-    plt.title("The Proportion of Improved Analogs as a Function of p(Ki)")
+    plt.title("The Proportion of Improved Analogs as a Function of p(Ki) \n (Top 5 Most Populated Groups)")
     plt.suptitle(subtitle)
     plt.ylim([0, 1])
-    # plt.gca().invert_xaxis()  # Invert the x-axis
-
     plt.show()
 
 
 def main():
     # Source CSV (extract_all.py -> formatting in Excel ->)
-    csv_file = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/alpha2a/alpha2a_extract_all.csv'
+    csv_file = 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/ampc/fangyu/fangyu_extract_all_fuzzy.csv'
     # JK: 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/ampc/jk/jk_extracted.csv'
     # Fangyu: 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/ampc/fangyu/fangyu_extract_all_fuzzy.csv'
     # Alpha2a: 'C:/Users/ndlev/PycharmProjects/shoichet/analogs/alpha2a/alpha2a_extract_all.csv'
 
-    subtitle = 'Fink, E. A. et al. (2022) DOI:10.1126/science.abn7065'
+    subtitle = 'Liu, F. (2023) (unpublished)'
     # JK: 'Lyu, J. et al. (2019) DOI: 10.1038/s41586-019-0917-9'
     # Fangyu: 'Liu, F. (2023) (unpublished)'
     # Alpha2a: 'Fink, E. A. et al. (2022) DOI:10.1126/science.abn7065'
