@@ -1,16 +1,19 @@
 # Analog Utilities and the Gradient Descent Pipeline
 ## Background:
-The basis for these programs originates from the notion of “Chemical Space Travel.” In 2007, work published by van Deursen and Reymond [1] reported a “spaceship” program which travels from a starting molecule A to a target molecule B through a continuum of structural mutations, and thereby charts unexplored chemical space. To enable movement in an unexplored chemical space and the discovery of new structures, the authors describe chemical space as a structural continuum. Rather than referring to proximity in property space, the authors defined a finite set of “Nearest Neighbor Mutations” related through a single structural mutation : Atom Type Exchange, Atom Inversion, Atom Removal, Atom Addition, Bond Saturation, Bond Unsaturation, Bond Rearrangement, and Aromatic Ring Addition. This description organizes chemical space as a graph in which nodes represent molecules and edges represent mutations. In theory, one can go from any Molecule A to any Molecule B in a finite time by simply applying the correct series Nearest Neighbor Mutations to Molecule A sequentially. The original Analogs.py and Analog_Methods.py programs were built on top of RDKit and designed to perform this Nearest Neighbor Mutation analog procedure for molecules specified in a .SMI file.
+The basis for these programs originates from the notion of “Chemical Space Travel.” In 2007, work published by van Deursen and Reymond [1] reported a “spaceship” program that travels from a starting molecule A to a target molecule B through a continuum of structural mutations, and thereby charts unexplored chemical space. The authors describe chemical space as a structural continuum to enable movement in an unexplored chemical space and the discovery of new structures. Rather than referring to proximity in property space, the authors defined a finite set of “Nearest Neighbor Mutations” related through a single structural mutation: Atom Type Exchange, Atom Inversion, Atom Removal, Atom Addition, Bond Saturation, Bond Unsaturation, Bond Rearrangement, and Aromatic Ring Addition. This description organizes chemical space as a graph in which nodes represent molecules and edges represent mutations. Theoretically, one can go from any Molecule A to any Molecule B in a finite time by simply applying the correct series of Nearest Neighbor Mutations to Molecule A sequentially. The original Analogs.py and Analog_Methods.py programs were built on top of RDKit and designed to perform this Nearest Neighbor Mutation analog procedure for molecules specified in a .SMI file.
 
 Work Cited:
 
 [1] van Deursen, R. and Reymond, J.-L. (2007), Chemical Space Travel. ChemMedChem, 2: 636-640. https://doi.org/10.1002/cmdc.200700021
-## Analogs.py:
+# The Analog Pipeline
+Generating analogs from an input .SMI can be performed using either Analog_Generator_Dev.py (requiring users to change input files within the code) or Analogs_Run.py and Analogs_Methods.py in concert (requiring users to input files on the command line). If the latter option is used, both files must be located in the same directory.
+
+## Analogs_Run.py:
 Usage: 
 ```
 >>python3 Analogs.py -i input.smi
 ```
-Analogs.py wraps Analog_Methods.py and serves as the location to which most user adjustments can be made. The most important user adjustment is the analog_methods list in main(). Here, all of the Nearest Neighbor Mutations are specified:
+Analogs_Run.py wraps Analog_Methods.py and serves as the location to which most user adjustments can be made. The most important user adjustment is the analog_methods list in main(). Here, all of the Nearest Neighbor Mutations are specified:
  ```
 Trim_Extremities: Trim Parent Molecule Extremity Atoms One At A Time if M.W. > 500 Da
 BO_Stepup: Recursively Increases Bond Order Until Maximum Conjugation
