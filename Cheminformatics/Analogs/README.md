@@ -6,14 +6,19 @@ Work Cited:
 
 [1] van Deursen, R. and Reymond, J.-L. (2007), Chemical Space Travel. ChemMedChem, 2: 636-640. https://doi.org/10.1002/cmdc.200700021
 # The Analog Pipeline
-Generating analogs from an input .SMI can be performed using either Analog_Generator_Dev.py (requiring users to change input files within the code) or Analogs_Run.py and Analogs_Methods.py in concert (requiring users to input files on the command line). If the latter option is used, both files must be located in the same directory.
+Generating analogs from an input .SMI can be performed using either Analog_Generator_Dev.py (requiring users to change input files within the code) or Analogs_Run.py and Analogs_Methods.py in concert (requiring users to input files on the command line). Both files must be in the same directory if the latter option is used.
 
 ## Analogs_Run.py:
+The Python environment must be sourced for the Python code to access the correct dependencies. As of 7/31/23, you can source my Python Environment:
+```
+>>source ./mnt/nfs/home/nlevinzon/bashrc.env
+>>conda activate venv
+```
 Usage: 
 ```
->>python3 Analogs.py -i input.smi
+>>python3 Analogs_Run.py -i input.smi
 ```
-Analogs_Run.py wraps Analog_Methods.py and serves as the location to which most user adjustments can be made. The most important user adjustment is the analog_methods list in main(). Here, all of the Nearest Neighbor Mutations are specified:
+Analogs_Run.py wraps Analog_Methods.py and serves as the location where most user adjustments can be made. The most important user adjustment is the analog_methods list in main(). Here, all of the Nearest Neighbor Mutations are specified:
  ```
 Trim_Extremities: Trim Parent Molecule Extremity Atoms One At A Time if M.W. > 500 Da
 BO_Stepup: Recursively Increases Bond Order Until Maximum Conjugation
@@ -25,7 +30,7 @@ Scans: Performs Scans On Parent Molecule
 ```
 * Note: A ‘Scan’ replaces hydrogens in a X-H bond with R, forming X-R. A ‘Walk’ replaces a heavy atom in a X-H bond with R, forming R-H.
 * Note: Some mutations (like some ‘Walks’ and ‘Scans’) produce more conservative changes when generating analogs, while other mutations (like ‘Ring_Breaker’) have the potential to generate analogs very different from the starting compound.
-To control for this, the analogging methods performed can be specified simply by commenting lines (using the ‘#’ character) containing unwanted operations in the analog_methods list. For example, if I only wanted the generator to produce analogs from halogen scans (F, Cl, Br, and I), my analog_methods list would look like: 	
+To control this, the analogging methods performed can be specified simply by commenting lines (using the ‘#’ character) containing unwanted operations in the analog_methods list. For example, if I only wanted the generator to produce analogs from halogen scans (F, Cl, Br, and I), my analog_methods list would look like: 	
 ```
 analog_methods = [
     	# [trim_extremities, "trim"],
@@ -54,11 +59,7 @@ Once the analog_methods list has been adjusted, the code can be run on the comma
 * The code must be run in a location supporting Python3
 **As of 7/31/23, I am using Gimel2
 * A Python Environment containing RDKit must be sourced
-**As of 7/31/23, you can source my Python Environment:
-```
->>source ./mnt/nfs/home/nlevinzon/bashrc.env
->>conda activate venv
-```
+
 Once this has been completed, you can run the analog generator on the command line. The code behaves generally by going into the specified .SMI file, generating analogs for each line, generating stereoisomers for each analog (if applicable), and writing to a new .SMI file. For easier record keeping, the code will read the first molecule in the .SMI and generate all analogs for that first molecule before moving onto the second molecule. Analogs can be easily seen in the output .SMI file because their generated ZINC IDs will take the format “PARENT_ID_analog_number.” For example, if my .SMI input file contained the ZINC ID “ZINC184991516,” then all analogs generated from that compound would have the ZINC ID “ZINC184991516_analog0001” The “analog_number” counts up to enumerate how many analogs each parent compound produced. 
 Currently, the code run on the command line in Gimel2 produces ~250 molecules/second.
 
