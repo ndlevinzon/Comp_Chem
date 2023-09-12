@@ -7,19 +7,22 @@ Work Cited:
 [1] van Deursen, R. and Reymond, J.-L. (2007), Chemical Space Travel. ChemMedChem, 2: 636-640. https://doi.org/10.1002/cmdc.200700021
 
 # The Analog Pipeline
-Generating analogs from an input .SMI can be performed using either Analog_Generator_Dev.py (requiring users to change input files within the code) or Analogs_Run.py and Analogs_Methods.py in concert (requiring users to input files on the command line). Both files must be in the same directory if the latter option is used.
+Generating analogs from an input .SMI can be performed using either Analog_Generator_Dev.py (requiring users to change input files within the code) or Analogs_Run.py and Analogs_Methods.py in concert (requiring users to input files on the command line).
+Both files must be in the same directory if the latter option is used.
 
 ## Analogs_Run.py:
-The Python environment must be sourced for the Python code to access the correct dependencies. As of 7/31/23, you can source my Python Environment:
+The Python environment must be sourced for the Python code to access the correct dependencies.
+As of 7/31/23, you can source my Python Environment:
 ```
 >>source ./mnt/nfs/home/nlevinzon/bashrc.env
 >>conda activate venv
 ```
+Analogs_Run.py wraps Analog_Methods.py and serves as the location where most user adjustments can be made.
 Usage: 
 ```
 >>python3 Analogs_Run.py -i input.smi
 ```
-Analogs_Run.py wraps Analog_Methods.py and serves as the location where most user adjustments can be made. The most important user adjustment is the analog_methods list in main(). Here, all of the Nearest Neighbor Mutations are specified:
+The most important user adjustment is the analog_methods list in main(). Here, all of the Nearest Neighbor Mutations are specified:
  ```
 Trim_Extremities: Trim Parent Molecule Extremity Atoms One At A Time if M.W. > 500 Da
 BO_Stepup: Recursively Increases Bond Order Until Maximum Conjugation
@@ -60,9 +63,12 @@ Once the analog_methods list has been adjusted, the code can be run on the comma
 * The code must be run in a location supporting Python3. As of 7/31/23, I am using Gimel2
 * A Python Environment containing RDKit must be sourced
 
-Once this has been completed, you can run the analog generator on the command line. The code behaves generally by going into the specified .SMI file, generating analogs for each line, generating stereoisomers for each analog (if applicable), and writing to a new .SMI file. For easier record keeping, the code will read the first molecule in the .SMI and generate all analogs for that first molecule before moving onto the second molecule. Analogs can be easily seen in the output .SMI file because their generated ZINC IDs will take the format “PARENT_ID_analog_number.” For example, if my .SMI input file contained the ZINC ID “ZINC184991516,” then all analogs generated from that compound would have the ZINC ID “ZINC184991516_analog0001” The “analog_number” counts up to enumerate how many analogs each parent compound produced. 
-Currently, the code run on the command line in Gimel2 produces ~250 molecules/second.
+Once this has been completed, you can run the analog generator on the command line. The code behaves generally by going into the specified .SMI file, generating analogs for each line, generating stereoisomers for each analog (if applicable), and writing to a new .SMI file.
+For easier record keeping, the code will read the first molecule in the .SMI and generate all analogs for that first molecule before moving onto the second molecule.
+Analogs can be easily seen in the output .SMI file because their generated ZINC IDs will take the format “PARENT_ID_analog_number.”
 
+For example, if my .SMI input file contained the ZINC ID “ZINC184991516,” then all analogs generated from that compound would have the ZINC ID “ZINC184991516_analog0001” The “analog_number” counts up to enumerate how many analogs each parent compound produced. 
+Currently, the code run on the command line in Gimel2 produces ~250 molecules/second.
 ## Analog_Methods.py
 Analog_Methods.py contains the actual operations specified as Nearest Neighbor Mutation. Here you can adjust the specifics of each method currently implemented and add new ones. When developing new methods, the following framework should be used:
 ```
@@ -90,7 +96,6 @@ First, you will need the correct environment:
 ```
 source /nfs/soft/dock/versions/dock38/pipeline_3D_ligands/env.(sh|csh)
 ```
-
 This environment will set up most of the required variables for you, as well as adds the submission scripts to your PATH, which means submission can be as simple as:
 
 bash:
@@ -124,17 +129,13 @@ The first thing you will need to do is format the OUTDOCK into a .CSV file conta
 ```
 |Dir_Source|mol#|id_num|flexiblecode|matched|nscored|time|hac|setnum|matnum|rank|charge|elect|gist|vdW|psol|asol|tStrain|mStrain|rec_d|r_hyd|Total|
 ```
-To do this, I first use process_dock_output.py to generate a dir_list file. Then I use a Python environment running Python2.7 in order to run extract_all_blazing_fast.py on my dir_list:
+To do this, I first use process_dock_output.py to generate a dir_list file. Then I use a Python environment running Python2.7 to run extract_all_blazing_fast.py on my dir_list:
 ```
 >> process_dock_output.py
 >> python2 extract_all_blazing_fast.py ./dir_list
 ```
 From here, I usually import the data into Microsoft Excel to generate the correctly-formatted .CSV (but I am sure there is a more elegant way to do this).
-Finally, run ligand_analog_curves and 
-
-
-
-
+Finally, run ligand_analog_curves.py and ligand_analog_statistics.py (in that order) for the results of the analog procedure.
 
 ## SMI_Filter.py
 This application is built on top of ChemAxon's CXCALC to take in a .SMI input and calculate each entry's pKa/b and Lipinski RO5
