@@ -145,7 +145,7 @@ Usage:
 Finally, run ligand_analog_curves.py and ligand_analog_statistics.py (in that order) for the results of the analog procedure.
 
 ## SMI_Filter.py
-This application is built on top of ChemAxon's CXCALC to take in a .SMI input and calculate each entry's pKa/b and Lipinski RO5
+This application is built on top of ChemAxon's CXCALC to take in a .SMI input and calculate each entry's pKa/b and Lipinski RO5.
 Usage: 
 ```
 >>python3 smi_filter.py -i input.smi
