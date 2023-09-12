@@ -135,6 +135,13 @@ To do this, I first use process_dock_output.py to generate a dir_list file. Then
 >> python2 extract_all_blazing_fast.py ./dir_list
 ```
 From here, I usually import the data into Microsoft Excel to generate the correctly-formatted .CSV (but I am sure there is a more elegant way to do this).
+
+When building from an .SMI in the UCSF DOCK 3D building pipeline, sometimes the ZINC IDs get truncated when printing the OUTDOCK. These impartial ZINC IDs make grouping ligands by family difficult after docking is complete.
+To solve these partial ZINC_IDs, a "fuzzy sort" is implemented to replace the incomplete ZINC IDs from the OUTDOCK using the output of Analogs.py as a key.
+Usage: 
+```
+>>python3 fix_broken_zinc.py -i OUTDOCK.csv -k KEY.smi
+```
 Finally, run ligand_analog_curves.py and ligand_analog_statistics.py (in that order) for the results of the analog procedure.
 
 ## SMI_Filter.py
@@ -144,10 +151,3 @@ Usage:
 >>python3 smi_filter.py -i input.smi
 ```
 Before running this code, ensure that the lines interacting with the CLI point to a directory containing ChemAxon. Also, several temporary files will be generated to parse the .SMI and CXCALC outputs (ensure that your working directory has space and RW permissions)
-
-## fix_truncated_zinc.py
-When building from an .SMI in the UCSF DOCK 3D building pipeline, sometimes the ZINC IDs get truncated when printing the OUTDOCK. These impartial ZINC IDs make grouping ligands by family difficult after docking is complete. To solve these partial ZINC_IDs, a "fuzzy sort" is implemented to replace the incomplete ZINC IDs from the OUTDOCK using the output of Analogs.py as a key.
-Usage: 
-```
->>python3 fix_broken_zinc.py -i OUTDOCK.csv -k KEY.smi
-```
