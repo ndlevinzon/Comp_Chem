@@ -5,6 +5,7 @@ The basis for these programs originates from the notion of “Chemical Space Tra
 Work Cited:
 
 [1] van Deursen, R. and Reymond, J.-L. (2007), Chemical Space Travel. ChemMedChem, 2: 636-640. https://doi.org/10.1002/cmdc.200700021
+
 # The Analog Pipeline
 Generating analogs from an input .SMI can be performed using either Analog_Generator_Dev.py (requiring users to change input files within the code) or Analogs_Run.py and Analogs_Methods.py in concert (requiring users to input files on the command line). Both files must be in the same directory if the latter option is used.
 
@@ -53,6 +54,7 @@ analog_methods = [
     	# [bioisosters_scanning, "bioisoster-scan"],
 	]
 ```
+
 Once the analog_methods list has been adjusted, the code can be run on the command line. For the code to run, do the following:
 * Both Analogs.py and Analog_Methods.py need to be in the same directory. As of 7/31/23, you can source the code here: /mnt/nfs/home/nlevinzon/analog_gen/new
 * The code must be run in a location supporting Python3. As of 7/31/23, I am using Gimel2
@@ -104,13 +106,43 @@ setenv OUTPUT_DEST $HOME/myoutput
 submit-all-jobs-slurm.bash
 ```
 
+After building, we must make, extract, and generate a file named "job_input_list" from a series of .DB2 files:
+```
+>> make_tarballs.bash </OUT Directory> <One Level Above /OUT Directory>
+>> tar xf *.db2.tar.gz
+>> find $PWD -type f -name "*.db2*" > my_db2_list
+>> split -a 3 --lines=5000 my_db2_list db2_chunk.
+>> for db2_chunk in db2_chunk.*; do
+>>	tar -czf $db2_chunk.db2.tgz --files-from $db2_chunk
+>>	done
+>> find $PWD -type f -name "db2_chunk.*.db2.tgz" > job_input_list
+```
+Use job_input_list, which contains paths to the correct .DB2 archives, as the input for the docking script
+
+## Extracting and Analyzing OUTDOCK
+The first thing you will need to do is format the OUTDOCK into a .CSV file containing the following standard headers:
+```
+|Dir_Source|mol#|id_num|flexiblecode|matched|nscored|time|hac|setnum|matnum|rank|charge|elect|gist|vdW|psol|asol|tStrain|mStrain|rec_d|r_hyd|Total|
+```
+To do this, I first use process_dock_output.py to generate a dir_list file. Then I use a Python environment running Python2.7 in order to run extract_all_blazing_fast.py on my dir_list:
+```
+>> process_dock_output.py
+>> python2 extract_all_blazing_fast.py ./dir_list
+```
+From here, I usually import the data into Microsoft Excel to generate the correctly-formatted .CSV (but I am sure there is a more elegant way to do this).
+Finally, run ligand_analog_curves and 
+
+
+
+
+
 ## SMI_Filter.py
 This application is built on top of ChemAxon's CXCALC to take in a .SMI input and calculate each entry's pKa/b and Lipinski RO5
 Usage: 
 ```
 >>python3 smi_filter.py -i input.smi
 ```
-Before running this code, make sure that the line interacting with the CLI are pointing to a directory containing ChemAxon. Also, several temporary files will be generated in order to parse the .SMI and CXCALC outputs (ensure that your working directory has space and RW permissions)
+Before running this code, ensure that the lines interacting with the CLI point to a directory containing ChemAxon. Also, several temporary files will be generated to parse the .SMI and CXCALC outputs (ensure that your working directory has space and RW permissions)
 
 ## fix_truncated_zinc.py
 When building from an .SMI in the UCSF DOCK 3D building pipeline, sometimes the ZINC IDs get truncated when printing the OUTDOCK. These impartial ZINC IDs make grouping ligands by family difficult after docking is complete. To solve these partial ZINC_IDs, a "fuzzy sort" is implemented to replace the incomplete ZINC IDs from the OUTDOCK using the output of Analogs.py as a key.
