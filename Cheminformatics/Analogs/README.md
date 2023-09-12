@@ -83,6 +83,27 @@ def new_method(smiles):
 	# Return analogs as RWMol objects
 	return analogs
 ```
+## Preparing for Docking: 3D Building Pipeline and DB2 Generation
+First, you will need the correct environment:
+```
+source /nfs/soft/dock/versions/dock38/pipeline_3D_ligands/env.(sh|csh)
+```
+
+This environment will set up most of the required variables for you, as well as adds the submission scripts to your PATH, which means submission can be as simple as:
+
+bash:
+```
+export INPUT_FILE=$HOME/myligands.smi
+export OUTPUT_DEST=$HOME/myoutput
+submit-all-jobs-slurm.bash
+```
+csh:
+```
+setenv INPUT_FILE $HOME/myligands.smi
+setenv OUTPUT_DEST $HOME/myoutput
+submit-all-jobs-slurm.bash
+```
+
 ## SMI_Filter.py
 This application is built on top of ChemAxon's CXCALC to take in a .SMI input and calculate each entry's pKa/b and Lipinski RO5
 Usage: 
