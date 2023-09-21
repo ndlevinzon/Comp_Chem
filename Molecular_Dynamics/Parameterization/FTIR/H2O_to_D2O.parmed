@@ -1,0 +1,7 @@
+parmed<<EOF
+parm ../decaC.OPCmod.top
+addLJType @O4' radius 1.6837 epsilon 0.1700
+change MASS @H1 2.014
+change MASS @H2 2.014
+outparm decaC.OPC_D2O.top
+EOF
