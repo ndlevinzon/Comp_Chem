@@ -5,7 +5,7 @@ converting H2O to D2O
 pdbNucleicAcidParse.py: formats source pdb into expected .list outputs
 
 1. Generate nucleic acid PDB using Avogadro
-2. Convert using pdb4amber.py utility
+2. Convert using Avogadro2Amber.py and the pdb4amber.py utility from Amber
 3. Run pdbNucleicAcidParse.py to generate ".list" files
 4. Build using Amber tLeap, convert H2O to D2O
 5. Minimize and equilibrate
