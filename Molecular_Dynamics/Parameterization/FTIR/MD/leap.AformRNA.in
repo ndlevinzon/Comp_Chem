@@ -1,0 +1,19 @@
+logfile AformRNA.log
+source leaprc.DNA.OL15
+source leaprc.RNA.OL3
+source leaprc.water.tip3p
+##################################################
+loadamberparams frcmod.ionsjc_tip3p
+set default PBRadii mbondi2
+
+AformRNA=loadpdb ACGACA_0_parsed.pdb
+solvatebox AformRNA TIP3PBOX 12.0
+
+# 150mM NaCl
+addions AformRNA Na+ 8
+addions AformRNA Cl- 8
+
+savepdb AformRNA ACGACA_1.wat.pdb
+saveamberparm AformRNA ACGACA_1.wat.top ACGACA_1.wat.crd
+quit
+
