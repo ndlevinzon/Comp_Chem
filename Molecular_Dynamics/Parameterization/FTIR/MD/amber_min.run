@@ -1,0 +1,24 @@
+#!/bin/bash
+#SBATCH --job-name=TMP
+#SBATCH --time=72:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=12
+#SBATCH --account=cheatham
+#SBATCH --partition=lonepeak-shared
+set -x
+ml gcc/8.5.0 intel-oneapi-mpi/2021.4.0 amber/20.20
+export runpmemd="pmemd.MPI"
+
+
+mpirun -np 12 $runpmemd -O -i ../../indir_dsRNA/min.in -o min.out -p ../build/AACCGA_1.D2O.top -c ../build/AACCGA_1.wat.crd -r min.rst -ref ../build/AACCGA_1.wat.crd
+mpirun -np 12 $runpmemd -O -i ../../indir_dsRNA/relax.in -o relax.out -p ../build/AACCGA_1.D2O.top -c min.rst -r relax.rst
+mpirun -np 12 $runpmemd -O -i ../../indir_dsRNA/heat.in -o heat.out -p ../build/AACCGA_1.D2O.top -c relax.rst -r heat.rst -x heat.mdcrd -ref relax.rst 
+mpirun -np 12 $runpmemd -O -i ../../indir_dsRNA/density.a.in -o density.a.out -p ../build/AACCGA_1.D2O.top -c heat.rst -r density.a.rst -x density.a.mdcrd -ref heat.rst
+mpirun -np 12 $runpmemd -O -i ../../indir_dsRNA/density.b.in -o density.b.out -p ../build/AACCGA_1.D2O.top -c density.a.rst -r density.b.rst -x density.b.mdcrd -ref density.a.rst
+mpirun -np 12 $runpmemd -O -i ../../indir_dsRNA/density.c.in -o density.c.out -p ../build/AACCGA_1.D2O.top -c density.b.rst -r density.c.rst -x density.c.mdcrd -ref density.b.rst
+mpirun -np 12 $runpmemd -O -i ../../indir_dsRNA/density.d.in -o density.d.out -p ../build/AACCGA_1.D2O.top -c density.c.rst -r density.d.rst -x density.d.mdcrd -ref density.c.rst
+mpirun -np 12 $runpmemd -O -i ../../indir_dsRNA/density.e.in -o density.e.out -p ../build/AACCGA_1.D2O.top -c density.d.rst -r density.e.rst -x density.e.mdcrd -ref density.d.rst
+mpirun -np 12 $runpmemd -O -i ../../indir_dsRNA/equil.in -o equil.out -p ../build/AACCGA_1.D2O.top -c density.e.rst -r equil.rst -x equil.mdcrd 
+mpirun -np 12 $runpmemd -O -i ../../indir_dsRNA/md.in -o md.out -p ../build/AACCGA_1.D2O.top -c equil.rst -r md.rst -x md.mdcrd
+
+
