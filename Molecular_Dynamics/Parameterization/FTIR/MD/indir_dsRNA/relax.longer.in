@@ -1,0 +1,5 @@
+minimize 
+ &cntrl
+  imin=1,maxcyc=25000,ncyc=10000,
+  ntpr=100,
+ /
