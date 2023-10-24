@@ -1,0 +1,16 @@
+#!/bin/bash
+#SBATCH --job-name=TMP
+#SBATCH --time=72:00:00
+#SBATCH --nodes=1
+#SBATCH --gres=gpu:1080ti:1
+#SBATCH --account=lonepeak-gpu
+#SBATCH --partition=lonepeak-gpu
+set -x
+module load cuda/9.1
+module load gcc/4.8.5
+export AMBERHOME="/uufs/chpc.utah.edu/common/home/u0818159/amber/GIT/amber20"
+export runpmemd="$AMBERHOME/bin/pmemd.cuda"
+
+$runpmemd -O -i ../../indir_dsRNA/md_ntwv.in -o md2_ntwv.out -p ../build/AACCGA_1.D2O.top -c ../min/md.rst -r md2_ntwv.rst -x md2_ntwv.mdcrd
+
+
