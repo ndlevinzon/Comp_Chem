@@ -9,7 +9,7 @@ def parse_pdb(input_pdb_file):
                 residue_number = int(line[22:26].strip())
                 residue_name_with_number = line[17:20].strip()
                 residue_name = residue_name_with_number[0]
- #               residue_name = ''.join(filter(str.isalpha, residue_name_with_number))
+ #              residue_name = ''.join(filter(str.isalpha, residue_name_with_number))
                 atom_name = line[12:16].strip()
                 atom_number = line[6:11].strip()
 
@@ -54,7 +54,7 @@ atom_orders = {
     'G': "N9 C8 H8 N7 C5 C6 O6 N1 H1 C2 N2 H21 H22 N3 C4",
 }
 
-#input_pdb_file = 'UACCGU_0_amber.pdb' 
+# input_pdb_file = 'UACCGU_0_amber.pdb' 
 input_pdb_file = '%s' %sys.argv[1] #'decaAU_AformRNA.pdb'  # Replace with your PDB file
 pdb_file_name = os.path.splitext(os.path.basename(input_pdb_file))[0]
 residues = parse_pdb(input_pdb_file)
