@@ -1,18 +1,18 @@
-If you’re reading this you are trying to do multidimensional replica exchange (likely on Frontera). 
+If you’re reading this, you are trying to do a multidimensional replica exchange (likely on Frontera). 
 
-First, you will need to determine what your model system is and which Hamiltonian (dihedral, vdW, etc) you will change. 
+First, you will need to determine your model system and which Hamiltonian (dihedral, vdW, etc) you will change. 
 
-Build your systems (topologies and coordinates) like you would normally using tleap. Be sure to note the number of solute atoms and solution molecules. You will likely use parmed to manipulate your original topology into the other topologies associated with your other Hamiltonians. You will need an even number of Hamiltonians. Create a “Hamiltonian.dat” file and list every topology, each on a seperate line. For example:
+Build your systems (topologies and coordinates) as you usually use tleap. Be sure to note the number of solute atoms and solution molecules. You will likely use parmed to manipulate your original topology into the other topologies associated with your other Hamiltonians. You will need an even number of Hamiltonians. Create a “Hamiltonian.dat” file and list every topology, each on a separate line. For example:
 10.topo 
 7.topo 
 etc…
 
-Then, make your way to this website: https://virtualchemistry.org/remd-temperature-generator/. Here you will calculate the temperatures. Your exchange probability will be 0.2. Choose an upper and lower limit (for RNA I did 270-300). Add your water number and atoms in your protein (or nucleic acid). Then hit calculate. You will be given a list of temperatures. This should be an even number. Take these temperatures and create a “Temperature.dat” file where each temperature is listed, each on a separate line. For example:
+Then, make your way to this website: https://virtualchemistry.org/remd-temperature-generator/. Here you will calculate the temperatures. Your exchange probability will be 0.2. Choose an upper and lower limit (for RNA I did 270-300). Add your water number and atoms in your protein (or nucleic acid). Then, hit calculate. You will be given a list of temperatures. This should be an even number. Take these temperatures and create a “Temperature.dat” file where each temperature is listed, each on a separate line. For example:
 270.3
 272.9
 Etc…
 
-Make a directory called “starting_structures” and minimize/equilibrate the system as you would normally for each hamiltonian/temperature pair. For example if you have 8 Hamiltonians and 24 temperatures you will get 192 combinations. Make sure the final restart files are labeled starting at 000.rst7 and going all the way up to the one less than the total number of combinations (bc you started at 0). For this example, mine would end at 191.rst7 .
+Make a directory called “starting_structures” and minimize/equilibrate the system as you would normally for each Hamiltonian/temperature pair. For example, if you have 8 Hamiltonians and 24 temperatures you will get 192 combinations. Make sure the final restart files are labeled starting at 000.rst7 and going all the way up to the one less than the total number of combinations (bc you started at 0). For this example, mine would end at 191.rst7 .
 
 Next, using the bash script provided below we are going to make all of the directories and groupfiles and input files necessary to run. 
 
