@@ -32,45 +32,36 @@ def calculate_centroid(coords):
         return None
     return np.mean(coords, axis=0)
 
-def parse_docked_poses(pdb_file):
-    """
-    Parse the PDB file containing docked poses to extract scores and coordinates.
-    """
+def parse_docked_poses(file_path):
     poses = []
-    scores = []
-    names = []  # Store the docked pose names
-    current_pose = []
-    current_score = None
-    current_name = None
+    pose = None
 
-    with open(pdb_file, 'r') as file:
-        lines = file.readlines()
+    with open(file_path, 'r') as file:
+        for line in file:
+            line = line.strip()
+            if line.startswith("MODEL"):
+                pose = {"Vina_Score": None, "Name": None, "Coordinates": []}
+            elif line.startswith("ENDMDL"):
+                if pose:
+                    poses.append(pose)
+                    pose = None
+            elif "REMARK  Name" in line:
+                name_match = re.search(r'Name\s*=\s*(\S+)', line)
+                if name_match:
+                    pose["Name"] = name_match.group(1)
+            elif "REMARK VINA RESULT" in line:
+                vina_match = re.search(r'VINA RESULT:\s*(-?\d+\.\d+)', line)
+                if vina_match:
+                    pose["Vina_Score"] = vina_match.group(1)
+            elif line.startswith("ATOM"):
+                atom_data = line.split()
+                atom_coords = [float(atom_data[5]), float(atom_data[6]), float(atom_data[7])]
+                pose["Coordinates"].append(atom_coords)
+            print(pose)
 
-    for line in lines:
-        if line.startswith("REMARK VINA RESULT:"):
-            match = re.search(r"REMARK VINA RESULT:\s+(-?\d+\.\d+)", line)
-            if match:
-                current_score = float(match.group(1))
-        elif line.startswith("REMARK Name = "):
-            match = re.search(r'REMARK\s*Name\s*=\s*\s*(\S+)', line)
-            if match:
-                current_name = line.strip()
-        elif line.startswith("ATOM") or line.startswith("HETATM"):
-            atom_name = line[12:16].strip()
-            coords = np.array([float(line[30:38]), float(line[38:46]), float(line[46:54])])
-            current_pose.append((atom_name, coords))
-        elif line.startswith("ENDMDL"):
-            if current_pose:
-                poses.append(current_pose)
-                scores.append(current_score)
-                names.append(current_name)
-                current_pose = []
-                current_score = None
-                current_name = None
+    return poses
 
-    return poses, scores, names
-
-def filter_poses_by_distance(crystal_centroid, poses, scores, names, threshold=10.0):
+def filter_poses_by_distance(crystal_centroid, poses, threshold=10.0):
     """
     Filter poses by distance to the crystal ligand centroid.
     """
@@ -79,17 +70,17 @@ def filter_poses_by_distance(crystal_centroid, poses, scores, names, threshold=1
     filtered_distances = []
     filtered_names = []
 
-    for idx, (pose, score, name) in enumerate(zip(poses, scores, names)):
-        pose_coords = np.array([coord for _, coord in pose])
+    for pose in poses:
+        pose_coords = np.array(pose["Coordinates"])
         pose_centroid = calculate_centroid(pose_coords)
         distance = calculate_distance(crystal_centroid, pose_centroid)
-        print(f"Pose {idx+1}: Distance from crystal ligand centroid = {distance:.3f} Å")
+        print(f"Pose {pose['Name']}: Distance from crystal ligand centroid = {distance:.3f} Å")
 
         if distance <= threshold:
-            filtered_poses.append(pose)
-            filtered_scores.append(score)
+            filtered_poses.append(pose["Coordinates"])
+            filtered_scores.append(pose["Vina_Score"])
             filtered_distances.append(distance)
-            filtered_names.append(name)
+            filtered_names.append(pose["Name"])
             
     return filtered_poses, filtered_scores, filtered_distances, filtered_names
 
@@ -110,12 +101,12 @@ def write_filtered_poses(output_file, filtered_poses, filtered_scores, filtered_
 
         for idx, (pose, score, distance, name) in enumerate(zip(filtered_poses, filtered_scores, filtered_distances, filtered_names)):
             out_f.write(f"MODEL {idx+1}\n")
-            out_f.write(f"REMARK Name = {name}\n")  # Include the name remark
+            out_f.write(f"REMARK Name = {name}\n")
             out_f.write(f"REMARK Model number: {idx+1}\n")
             out_f.write(f"REMARK Vina score: {score}\n")
             out_f.write(f"REMARK Distance from crystal ligand centroid: {distance:.3f} A\n")
-            for atom_name, coord in pose:
-                out_f.write(f"HETATM{atom_name:<4} {'':4}{'LIG A   1    '}{coord[0]:8.3f}{coord[1]:8.3f}{coord[2]:8.3f}  1.00  0.00           C\n")
+            for coord in pose:
+                out_f.write(f"ATOM      1  C   LIG A   1    {coord[0]:8.3f}{coord[1]:8.3f}{coord[2]:8.3f}  1.00  0.00           C\n")
             out_f.write("ENDMDL\n")
 
 def main(source_pdb, ligand_resname, docked_pdb, output_pdb):
@@ -127,9 +118,9 @@ def main(source_pdb, ligand_resname, docked_pdb, output_pdb):
         print("Could not find ligand in the source PDB file.")
         return
 
-    poses, scores, names = parse_docked_poses(docked_pdb)
+    poses = parse_docked_poses(docked_pdb)
     total_input_poses = len(poses)  # Count of input docked poses
-    filtered_poses, filtered_scores, filtered_distances, filtered_names = filter_poses_by_distance(crystal_centroid, poses, scores, names)
+    filtered_poses, filtered_scores, filtered_distances, filtered_names = filter_poses_by_distance(crystal_centroid, poses)
     total_filtered_poses = len(filtered_poses)  # Count of filtered docked poses
 
     output_path = os.path.dirname(source_pdb)
