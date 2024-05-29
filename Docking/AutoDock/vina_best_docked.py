@@ -1,11 +1,11 @@
 import os
 import re
 
-def extract_scores_and_poses(pdbqt_file):
+def extract_scores_and_poses(pdb_file):
     """
     Extract all docking scores and their corresponding poses from a PDBQT file.
     """
-    with open(pdbqt_file, 'r') as file:
+    with open(pdb_file, 'r') as file:
         lines = file.readlines()
 
     scores_and_poses = []
@@ -42,7 +42,7 @@ def combine_poses_to_pdb(output_pdb_file, sorted_poses):
             if name_remark:
                 output_file.write(f"{name_remark}\n")
             output_file.write(f"REMARK VINA RESULT: {score}\n")
-            output_file.writelines(line for line in pose if not line.startswith("REMARK VINA RESULT:") and not line.startswith("REMARK  Name = "))
+            output_file.writelines(line for line in pose if not line.startswith("REMARK VINA RESULT:") and not line.startswith("REMARK Name = "))
             output_file.write("ENDMDL\n")
 
 
@@ -60,7 +60,7 @@ def main(input_directory):
 
     sorted_poses = sorted(all_scores_and_poses, key=lambda x: x[0])
 
-    output_pdb_file = os.path.join(input_directory, "combined_output.pdb")
+    output_pdb_file = os.path.join(input_directory, "best_docked.pdb")
     combine_poses_to_pdb(output_pdb_file, sorted_poses)
     print(f"Combined PDB file created: {output_pdb_file}")
 
