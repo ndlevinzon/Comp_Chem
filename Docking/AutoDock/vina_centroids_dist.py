@@ -55,9 +55,9 @@ def parse_docked_poses(file_path):
                     pose["Vina_Score"] = vina_match.group(1)
             elif line.startswith("ATOM"):
                 atom_data = line.split()
+                atom_name = atom_data[2]
                 atom_coords = [float(atom_data[5]), float(atom_data[6]), float(atom_data[7])]
-                pose["Coordinates"].append(atom_coords)
-            print(pose)
+                pose["Coordinates"].append((atom_name, atom_coords))
 
     return poses
 
@@ -71,7 +71,7 @@ def filter_poses_by_distance(crystal_centroid, poses, threshold=10.0):
     filtered_names = []
 
     for pose in poses:
-        pose_coords = np.array(pose["Coordinates"])
+        pose_coords = np.array([coord for _, coord in pose["Coordinates"]])
         pose_centroid = calculate_centroid(pose_coords)
         distance = calculate_distance(crystal_centroid, pose_centroid)
         print(f"Pose {pose['Name']}: Distance from crystal ligand centroid = {distance:.3f} Å")
@@ -105,8 +105,8 @@ def write_filtered_poses(output_file, filtered_poses, filtered_scores, filtered_
             out_f.write(f"REMARK Model number: {idx+1}\n")
             out_f.write(f"REMARK Vina score: {score}\n")
             out_f.write(f"REMARK Distance from crystal ligand centroid: {distance:.3f} A\n")
-            for coord in pose:
-                out_f.write(f"ATOM      1  C   LIG A   1    {coord[0]:8.3f}{coord[1]:8.3f}{coord[2]:8.3f}  1.00  0.00           C\n")
+            for atom_name, coord in pose:
+                out_f.write(f"ATOM      1  {atom_name:<3} LIG A   1    {coord[0]:8.3f}{coord[1]:8.3f}{coord[2]:8.3f}  1.00  0.00           {atom_name[0]}\n")
             out_f.write("ENDMDL\n")
 
 def main(source_pdb, ligand_resname, docked_pdb, output_pdb):
