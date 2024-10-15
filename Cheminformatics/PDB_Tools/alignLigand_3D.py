@@ -274,8 +274,8 @@ def minimize_ligand_to_align_with_substructure(ligand1, ligand2, max_iters=1000)
     return minimized_ligand2
 
 # Main flow, loading ligands, and aligning by distal atoms
-ligand1 = load_ligand_from_pdb('barrios/P2/md/alkyne/SHP2_modelling/source_ligand.pdb')
-ligand2 = load_ligand_from_mol2('barrios/P2/md/alkyne/SHP2_modelling/17-alkyne-PEG8-IA3.mol2')
+ligand1 = load_ligand_from_pdb('PATH_TO_STATIONARY_LIGAND')
+ligand2 = load_ligand_from_mol2('PATH_TO_MOBILE_LIGAND')
 
 rmsd_threshold = 2.0  # Set the RMSD threshold to 2 Å
 max_iterations = 10   # Maximum iterations
@@ -331,4 +331,4 @@ minimized_ligand2 = minimize_ligand_energy(best_ligand2)
 
 # Write the minimized, best-aligned ligand2 to PDB file
 print("Writing minimized best-aligned ligand2 to PDB file...")
-MolToPDBFile(minimized_ligand2, 'barrios/P2/md/alkyne/SHP2_modelling/minimized_best_refined_ligand2.pdb')
+MolToPDBFile(minimized_ligand2, 'minimized_best_refined_ligand.pdb')
