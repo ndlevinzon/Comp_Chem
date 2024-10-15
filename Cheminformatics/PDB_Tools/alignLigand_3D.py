@@ -4,6 +4,15 @@ from rdkit.Chem import rdFMCS
 from rdkit.Chem.rdmolfiles import MolToPDBFile
 import numpy as np
 
+
+def load_ligand_from_pdb(pdb_file):
+    print(f"Loading ligand1 from PDB: {pdb_file}")
+    return Chem.rdmolfiles.MolFromPDBFile(pdb_file, removeHs=False, sanitize=False)
+
+def load_ligand_from_mol2(mol2_file):
+    print(f"Loading ligand2 from MOL2: {mol2_file}")
+    return Chem.MolFromMol2File(mol2_file, removeHs=False)
+
 def align_ligands_by_mcs(ligand1_mol, ligand2_mol):
     print("Finding Maximum Common Substructure (MCS) between ligands...")
     mcs_result = rdFMCS.FindMCS([ligand1_mol, ligand2_mol])
@@ -145,17 +154,9 @@ def improve_alignment_with_bond_manipulation(ligand1, ligand2, iterations=5, str
     return ligand2
 
 
-def load_ligand_from_pdb(pdb_file):
-    print(f"Loading ligand1 from PDB: {pdb_file}")
-    return Chem.rdmolfiles.MolFromPDBFile(pdb_file, removeHs=False, sanitize=False)
-
-def load_ligand_from_mol2(mol2_file):
-    print(f"Loading ligand2 from MOL2: {mol2_file}")
-    return Chem.MolFromMol2File(mol2_file, removeHs=False)
-
 # Load ligands
 ligand1 = load_ligand_from_pdb('barrios/P2/md/alkyne/SHP2_modelling/source_ligand.pdb')
-ligand2 = load_ligand_from_mol2('barrios/P2/md/alkyne/SHP2_modelling/13-alkyne-PEG8-IA3.mol2')
+ligand2 = load_ligand_from_mol2('barrios/P2/md/alkyne/SHP2_modelling/14-alkyne-PEG8-IA3.mol2')
 
 # Align ligand2 to ligand1
 try:
