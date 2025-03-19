@@ -1,4 +1,5 @@
 import json
+import os
 from itertools import product
 
 
@@ -95,18 +96,11 @@ class ProteinSequenceReader:
         """Returns the list of proteins."""
         return self.proteins
 
-    def edit_residue_in_protein(self, protein_id, position, new_amino_acid):
-        """
-        Edits a specific residue in a given protein by ID.
-
-        Parameters:
-        protein_id (str): The ID of the protein to modify.
-        position (int): 1-based index of the residue.
-        new_amino_acid (str): The new amino acid.
-        """
+    def edit_residue_in_protein(self, protein_id, position, new_amino_acid, modifications):
         for protein in self.proteins:
             if protein_id in protein.protein_id:  # Match any listed ID
                 protein.edit_residue(position, new_amino_acid)
+                modifications.append((position, new_amino_acid))  # Track modifications
                 return
         print(f"Error: Protein with ID '{protein_id}' not found.")
 
@@ -116,8 +110,15 @@ class ProteinSequenceReader:
             residues = protein.get_residues(residue_numbers)
             print(f"Protein {', '.join(protein.protein_id)}: Residues at {residue_numbers} -> {''.join(residues)}")
 
-    def print_modified_json(self):
-        """Prints the modified protein data in the original JSON format."""
+    def save_modified_json(self, original_filename="test.json", modifications=[]):
+        """
+        Saves the modified protein data to a new JSON file with a descriptive filename
+        showing the amino acid changes and positions.
+
+        Parameters:
+        - original_filename (str): Name of the original file.
+        - modifications (list of tuples): List of modifications as (position, new_amino_acid).
+        """
         modified_data = {
             "name": "Modified_Protein_Data",
             "sequences": [protein.to_dict() for protein in self.proteins],
@@ -125,7 +126,17 @@ class ProteinSequenceReader:
             "dialect": "alphafold3",
             "version": 1
         }
-        print(json.dumps(modified_data, indent=2))
+
+        # Generate a filename that includes modifications
+        modification_tag = "_".join([f"{pos}{aa}" for pos, aa in modifications])
+        base_name, ext = os.path.splitext(original_filename)
+        new_filename = f"{base_name}_{modification_tag}{ext}"
+
+        # Save the modified JSON to a file
+        with open(new_filename, "w") as file:
+            json.dump(modified_data, file, indent=2)
+
+        print(f"Modified JSON saved to: {new_filename}")
 
 
 class AminoAcidSet:
@@ -176,17 +187,13 @@ if __name__ == "__main__":
     residue_positions = [70, 71, 313, 314]
     reader.get_residue_codes(residue_positions)
 
-    # Example: Edit residue at position 10 of protein "A" to 'M'
-    reader.edit_residue_in_protein("A", 70, "Q")
+    modifications = []
 
-    # Example: Edit residue at position 50 of protein "B" to 'W'
-    reader.edit_residue_in_protein("A", 71, "Q")
+    # Example modifications
+    reader.edit_residue_in_protein("A", 70, "A", modifications)
+    reader.edit_residue_in_protein("A", 71, "Q", modifications)
+    reader.edit_residue_in_protein("A", 313, "Q", modifications)
+    reader.edit_residue_in_protein("A", 314, "Q", modifications)
 
-    # Example: Edit residue at position 10 of protein "A" to 'M'
-    reader.edit_residue_in_protein("A", 313, "Q")
-
-    # Example: Edit residue at position 50 of protein "B" to 'W'
-    reader.edit_residue_in_protein("A", 314, "Q")
-
-    # Print the modified JSON format
-    reader.print_modified_json()
+    # Save modified JSON with descriptive filename
+    reader.save_modified_json("./test.json", modifications)
