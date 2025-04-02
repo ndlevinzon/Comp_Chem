@@ -3,7 +3,6 @@ import json
 import pandas as pd
 from tqdm import tqdm
 from protlearn.features import aaindex1
-from protlearn.utils import aaindex1_properties
 
 
 def extract_linker_sequence(json_path):
@@ -16,18 +15,15 @@ def extract_linker_sequence(json_path):
 
 
 def encode_linker(linker):
-    """Returns AAindex1 features for a 4-residue linker."""
-    features = aaindex1([linker])  # shape: (1, N_features)
-    return features[0]  # return as flat list
+    """Returns (feature names, feature values) for a 4-residue linker."""
+    features, feature_names = aaindex1([linker])
+    return feature_names, features[0]
 
 
 def process_all_jsons(json_dir, output_csv):
     """Process all JSON files in a directory tree, extract linker, encode, and save."""
     encoded_data = []
-
-    # Get property names from protlearn
-    property_names = aaindex1_properties()
-    header = [f"aaindex_{name}" for name in property_names]
+    feature_names = None
 
     for root, _, files in os.walk(json_dir):
         for filename in tqdm(files, desc="Encoding linkers"):
@@ -35,12 +31,15 @@ def process_all_jsons(json_dir, output_csv):
                 path = os.path.join(root, filename)
                 try:
                     linker = extract_linker_sequence(path)
-                    features = encode_linker(linker)
+                    if feature_names is None:
+                        feature_names, features = encode_linker(linker)
+                    else:
+                        _, features = encode_linker(linker)
                     row = {
                         "filename": filename,
                         "linker": linker,
                     }
-                    row.update(dict(zip(header, features)))
+                    row.update(dict(zip(feature_names, features)))
                     encoded_data.append(row)
                 except Exception as e:
                     print(f"[WARNING] Failed on {filename}: {e}")
