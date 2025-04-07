@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import f_regression
 from sklearn.metrics import r2_score
+from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -93,6 +94,36 @@ for pos in range(4):
     plt.savefig(f"C:/Users/ndlev/OneDrive/Documents/Research/diehl/pancake_test/biosensor_ml/results/SAR_2/{label}_top100_SAR_grid.png", dpi=300)
     plt.close()
 
+    # --- Reconcile with Pearson correlation ---
+    r_vals = []
+    p_vals = []
+
+    X_target = X_encoded if 'X_encoded' in locals() and X_encoded.shape[0] == len(y) else X_combined
+
+    for i in range(X_target.shape[1]):
+        r, p = pearsonr(X_target[:, i], y)
+        r_vals.append(r)
+        p_vals.append(p)
+
+    r_vals = np.nan_to_num(r_vals)
+    r_squared_pearson = np.array(r_vals) ** 2
+
+    # Add to results dataframe
+    results["Pearson_r"] = r_vals
+    results["R_squared"] = r_squared_pearson
+    results["Pearson_pval"] = p_vals
+    results["abs_r"] = np.abs(r_vals)
+    results["combined_score"] = results["Importance"] * results["abs_r"]
+
+    plt.figure(figsize=(6, 6))
+    sns.scatterplot(data=results, x="abs_r", y="Importance")
+    plt.title(f"Feature Importance vs |Pearson r| ({label})")
+    plt.xlabel("|Pearson Correlation|")
+    plt.ylabel("Random Forest Importance")
+    plt.tight_layout()
+    plt.show()
+
+
 # --- Interaction Analysis ---
 interaction_pairs = [(0, 1), (2, 3)]
 for i, j in interaction_pairs:
@@ -167,3 +198,42 @@ for i, j in interaction_pairs:
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     plt.savefig(f"C:/Users/ndlev/OneDrive/Documents/Research/diehl/pancake_test/biosensor_ml/results/SAR_2/{label_i}_{label_j}_top100_SAR_grid.png", dpi=300)
     plt.close()
+
+    # --- Reconcile with Pearson correlation ---
+    r_vals = []
+    p_vals = []
+
+    # Determine correct matrix and label set
+    if 'X_combined' in locals() and X_combined.shape[1] == len(results):
+        X_target = X_combined
+        labels = combo_labels
+    else:
+        X_target = X_encoded
+        labels = descriptors
+
+    # Ensure feature count matches
+    assert X_target.shape[1] == len(results), f"Mismatch: {X_target.shape[1]} features vs {len(results)} result rows"
+
+    # Compute Pearson stats
+    for i in range(X_target.shape[1]):
+        r, p = pearsonr(X_target[:, i], y)
+        r_vals.append(r)
+        p_vals.append(p)
+
+    r_vals = np.nan_to_num(r_vals)
+    r_squared_pearson = np.array(r_vals) ** 2
+
+    # Add to results dataframe
+    results["Pearson_r"] = r_vals
+    results["R_squared"] = r_squared_pearson
+    results["Pearson_pval"] = p_vals
+    results["abs_r"] = np.abs(r_vals)
+    results["combined_score"] = results["Importance"] * results["abs_r"]
+
+    plt.figure(figsize=(6, 6))
+    sns.scatterplot(data=results, x="abs_r", y="Importance")
+    plt.title(f"Feature Importance vs |Pearson r| ({label})")
+    plt.xlabel("|Pearson Correlation|")
+    plt.ylabel("Random Forest Importance")
+    plt.tight_layout()
+    plt.show()
