@@ -9,54 +9,72 @@ from sklearn.metrics import r2_score
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Load your data
+# Load data
 df = pd.read_csv("C:/Users/ndlev/OneDrive/Documents/Research/diehl/pancake_test/biosensor_ml/data/experimental_data.csv")
 linkers = df['linker'].tolist()
 y = df['fluor_%Dif'].values
 
-# Encode using aaindex1 (physicochemical properties)
-X_encoded, descriptors = aaindex1(linkers)
-print("Number of sequences:", len(linkers))
-print("Encoded shape:", X_encoded.shape)
+# Sanity check: all linkers should be 4 AAs
+assert all(len(seq) == 4 for seq in linkers), "Non-4mer linker found!"
 
-# Skip reshaping — just use X_encoded as flat feature vector
-X = X_encoded
-feature_names = [f"feat_{i}" for i in range(X.shape[1])]
+# Position-wise encoding and analysis
+for pos in range(4):
+    print(f"\n--- Analyzing Position {pos + 1} ---")
 
-# Train-test split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # Extract single AA per position
+    position_aa = [seq[pos] for seq in linkers]
 
-# Standardize
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
+    # Encode AA at this position
+    X_encoded, descriptors = aaindex1(position_aa)
+    descriptors = list(descriptors)
 
-# Fit regression model
-model = RandomForestRegressor(random_state=42)
-model.fit(X_train_scaled, y_train)
-y_pred = model.predict(X_test_scaled)
-r2 = r2_score(y_test, y_pred)
-print(f"R² on test set: {r2:.2f}")
+    feature_names = descriptors  # each feature is already named
 
-# Feature importance
-importances = model.feature_importances_
-F, p_vals = f_regression(X_train_scaled, y_train)
+    # Train-test split
+    X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.2, random_state=42)
 
-# Combine into dataframe
-results = pd.DataFrame({
-    "Feature": feature_names,
-    "Importance": importances,
-    "F_score": F,
-    "p_value": p_vals
-}).sort_values("Importance", ascending=False)
+    # Standardize
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
 
-print(results.head(10))
+    # Fit model
+    model = RandomForestRegressor(random_state=42)
+    model.fit(X_train_scaled, y_train)
+    y_pred = model.predict(X_test_scaled)
+    r2 = r2_score(y_test, y_pred)
+    print(f"R² on test set (position {pos+1}): {r2:.2f}")
 
-# Plot top 10 features
-plt.figure(figsize=(10, 6))
-sns.barplot(x="Importance", y="Feature", data=results.head(10))
-plt.title(f"Top 10 Physicochemical Features (R² = {r2:.2f})")
-plt.xlabel("Feature Importance")
-plt.ylabel("AAIndex1 Feature Index")
-plt.tight_layout()
-plt.show()
+    # Feature importance and statistics
+    importances = model.feature_importances_
+    F, p_vals = f_regression(X_train_scaled, y_train)
+
+    results = pd.DataFrame({
+        "Feature": feature_names,
+        "Importance": importances,
+        "F_score": F,
+        "p_value": p_vals
+    }).sort_values("Importance", ascending=False)
+
+    print(results.head(10))
+
+    # --- Plot: Feature Importance Barplot ---
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x="Importance", y="Feature", data=results.head(10))
+    plt.title(f"Top 10 Features at Position {pos+1} (R² = {r2:.2f})")
+    plt.xlabel("Feature Importance")
+    plt.ylabel("AAIndex1 Descriptor")
+    plt.tight_layout()
+    plt.show()
+
+    # --- Plot: SAR Line Plot for Top 3 Features ---
+    top_feats = results.head(3)['Feature'].values
+    for feat in top_feats:
+        feat_index = descriptors.index(feat)
+        plt.figure(figsize=(6, 4))
+        sns.regplot(x=X_encoded[:, feat_index], y=y)
+        plt.title(f"SAR: {feat} vs. Fluorescence (Position {pos+1})")
+        plt.xlabel(feat)
+        plt.ylabel("Fluorescence")
+        plt.tight_layout()
+        plt.show()
