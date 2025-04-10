@@ -1,0 +1,18 @@
+npts 40 40 40                        # num.grid points in xyz
+parameter_file AD4.1_bound.dat       # force field default parameter file
+gridfld 2ai6_charged.maps.fld        # grid_data_file
+spacing 0.375                        # spacing(A)
+receptor_types A C H HD N NA OA SA   # receptor atom types
+ligand_types A C NA OA N HD          # ligand atom types
+receptor 2ai6_charged.pdbqt          # macromolecule
+gridcenter 22.959 0.855 -15.784      # xyz-coordinates or auto
+smooth 0.5                           # store minimum energy w/in rad(A)
+map 2ai6_charged.A.map               # atom-specific affinity map
+map 2ai6_charged.C.map               # atom-specific affinity map
+map 2ai6_charged.NA.map              # atom-specific affinity map
+map 2ai6_charged.OA.map              # atom-specific affinity map
+map 2ai6_charged.N.map               # atom-specific affinity map
+map 2ai6_charged.HD.map              # atom-specific affinity map
+elecmap 2ai6_charged.e.map           # electrostatic potential map
+dsolvmap 2ai6_charged.d.map              # desolvation potential map
+dielectric -0.1465                   # <0, AD4 distance-dep.diel;>0, constant
