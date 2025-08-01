@@ -32,10 +32,17 @@ struct DihedralAngles {
     double psi;
 };
 
+struct AnalysisData {
+    double phi;
+    double psi;
+    double rmsd;
+};
+
 class PDBReader {
 private:
     std::vector<std::vector<Residue>> frames;
     std::string filename;
+    std::vector<Atom> reference_atoms; // Store reference frame atoms for RMSD
 
     // Helper function to calculate distance between two points
     double distance(const Atom& a, const Atom& b) {
@@ -127,6 +134,73 @@ private:
         return nullptr;
     }
 
+    // Helper function to get all backbone atoms from a frame
+    std::vector<Atom> get_backbone_atoms(int frame_idx) {
+        std::vector<Atom> backbone_atoms;
+
+        if (frame_idx >= static_cast<int>(frames.size())) {
+            return backbone_atoms;
+        }
+
+        for (size_t i = 0; i < frames[frame_idx].size(); ++i) {
+            auto& res = frames[frame_idx][i];
+            // Get backbone atoms (N, CA, C, O)
+            Atom* n_atom = find_atom(res, "N");
+            Atom* ca_atom = find_atom(res, "CA");
+            Atom* c_atom = find_atom(res, "C");
+            Atom* o_atom = find_atom(res, "O");
+
+            if (n_atom) backbone_atoms.push_back(*n_atom);
+            if (ca_atom) backbone_atoms.push_back(*ca_atom);
+            if (c_atom) backbone_atoms.push_back(*c_atom);
+            if (o_atom) backbone_atoms.push_back(*o_atom);
+        }
+
+        return backbone_atoms;
+    }
+
+    // Helper function to calculate RMSD between two sets of atoms
+    double calculate_rmsd(const std::vector<Atom>& atoms1, const std::vector<Atom>& atoms2) {
+        if (atoms1.size() != atoms2.size() || atoms1.empty()) {
+            return 0.0;
+        }
+
+        // Calculate centroids
+        double cx1 = 0.0, cy1 = 0.0, cz1 = 0.0;
+        double cx2 = 0.0, cy2 = 0.0, cz2 = 0.0;
+
+        for (const auto& atom : atoms1) {
+            cx1 += atom.x;
+            cy1 += atom.y;
+            cz1 += atom.z;
+        }
+
+        for (const auto& atom : atoms2) {
+            cx2 += atom.x;
+            cy2 += atom.y;
+            cz2 += atom.z;
+        }
+
+        int n_atoms = static_cast<int>(atoms1.size());
+        cx1 /= n_atoms;
+        cy1 /= n_atoms;
+        cz1 /= n_atoms;
+        cx2 /= n_atoms;
+        cy2 /= n_atoms;
+        cz2 /= n_atoms;
+
+        // Calculate RMSD
+        double sum_squared_diff = 0.0;
+        for (size_t i = 0; i < atoms1.size(); ++i) {
+            double dx = (atoms1[i].x - cx1) - (atoms2[i].x - cx2);
+            double dy = (atoms1[i].y - cy1) - (atoms2[i].y - cy2);
+            double dz = (atoms1[i].z - cz1) - (atoms2[i].z - cz2);
+            sum_squared_diff += dx * dx + dy * dy + dz * dz;
+        }
+
+        return sqrt(sum_squared_diff / n_atoms);
+    }
+
 public:
     PDBReader(const std::string& fname) : filename(fname) {}
 
@@ -212,6 +286,13 @@ public:
 
         file.close();
         std::cout << "Read " << frames.size() << " frames from PDB file." << std::endl;
+
+        // Store reference frame (first frame) backbone atoms for RMSD calculation
+        if (!frames.empty()) {
+            reference_atoms = get_backbone_atoms(0);
+            std::cout << "Stored " << reference_atoms.size() << " reference backbone atoms for RMSD calculation." << std::endl;
+        }
+
         return true;
     }
 
@@ -225,7 +306,8 @@ public:
 
         // Find target residue in current frame
         Residue* target_res = nullptr;
-        for (auto& res : frames[frame_idx]) {
+        for (size_t i = 0; i < frames[frame_idx].size(); ++i) {
+            auto& res = frames[frame_idx][i];
             if (res.resid == target_resid) {
                 target_res = &res;
                 break;
@@ -251,7 +333,8 @@ public:
         }
 
         // Find C from previous residue
-        for (auto& res : frames[frame_idx]) {
+        for (size_t i = 0; i < frames[frame_idx].size(); ++i) {
+            auto& res = frames[frame_idx][i];
             if (res.resid == target_resid - 1) {
                 C_prev = find_atom(res, "C");
                 break;
@@ -267,7 +350,8 @@ public:
         Atom* N_next = nullptr;
 
         // Find N from next residue
-        for (auto& res : frames[frame_idx]) {
+        for (size_t i = 0; i < frames[frame_idx].size(); ++i) {
+            auto& res = frames[frame_idx][i];
             if (res.resid == target_resid + 1) {
                 N_next = find_atom(res, "N");
                 break;
@@ -282,8 +366,31 @@ public:
         return angles;
     }
 
-    int getNumFrames() const {
-        return static_cast<int>(frames.size());
+    double calculateRMSD(int frame_idx) {
+        if (frame_idx >= static_cast<int>(frames.size()) || reference_atoms.empty()) {
+            return 0.0;
+        }
+
+        std::vector<Atom> current_backbone = get_backbone_atoms(frame_idx);
+        return calculate_rmsd(reference_atoms, current_backbone);
+    }
+
+    AnalysisData calculateAll(int target_resid, int frame_idx) {
+        AnalysisData data = { 0.0, 0.0, 0.0 };
+
+        // Calculate dihedrals
+        DihedralAngles angles = calculateDihedrals(target_resid, frame_idx);
+        data.phi = angles.phi;
+        data.psi = angles.psi;
+
+        // Calculate RMSD
+        data.rmsd = calculateRMSD(frame_idx);
+
+        return data;
+    }
+
+    size_t getNumFrames() const {
+        return frames.size();
     }
 
     void writeCSV(const std::string& output_filename, int target_resid, double timestep_ps = 100.0) {
@@ -294,17 +401,18 @@ public:
         }
 
         // Write header
-        csv_file << "frame,time_ps,phi_deg,psi_deg\n";
+        csv_file << "frame,time_ps,phi_deg,psi_deg,rmsd_angstrom\n";
 
         // Write data for each frame
-        for (int frame = 0; frame < static_cast<int>(frames.size()); ++frame) {
-            DihedralAngles angles = calculateDihedrals(target_resid, frame);
+        for (size_t frame = 0; frame < frames.size(); ++frame) {
+            AnalysisData data = calculateAll(target_resid, static_cast<int>(frame));
             double time_ps = frame * timestep_ps;
 
             csv_file << frame << ","
                 << std::fixed << std::setprecision(2) << time_ps << ","
-                << std::fixed << std::setprecision(3) << angles.phi << ","
-                << std::fixed << std::setprecision(3) << angles.psi << "\n";
+                << std::fixed << std::setprecision(3) << data.phi << ","
+                << std::fixed << std::setprecision(3) << data.psi << ","
+                << std::fixed << std::setprecision(3) << data.rmsd << "\n";
 
             if (frame % 100 == 0) {
                 std::cout << "Processed frame " << frame << "/" << frames.size() - 1 << std::endl;
@@ -345,9 +453,9 @@ int main() {
     if (dot_pos != std::string::npos) {
         output_filename = output_filename.substr(0, dot_pos);
     }
-    output_filename += "_res" + std::to_string(target_residue) + "_phi_psi.csv";
+    output_filename += "_res" + std::to_string(target_residue) + "_analysis.csv";
 
-    // Calculate dihedrals and write to CSV
+    // Calculate dihedrals and RMSD, then write to CSV
     reader.writeCSV(output_filename, target_residue, timestep_ps);
 
     std::cout << "Analysis complete!" << std::endl;
