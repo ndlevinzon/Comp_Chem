@@ -38,6 +38,12 @@ struct AnalysisData {
     double rmsd;
 };
 
+struct RMSFData {
+    int resid;
+    std::string resname;
+    double rmsf;
+};
+
 class PDBReader {
 private:
     std::vector<std::vector<Residue>> frames;
@@ -137,7 +143,7 @@ private:
     // Helper function to get all backbone atoms from a frame
     std::vector<Atom> get_backbone_atoms(int frame_idx) {
         std::vector<Atom> backbone_atoms;
-
+        
         if (frame_idx >= static_cast<int>(frames.size())) {
             return backbone_atoms;
         }
@@ -375,17 +381,87 @@ public:
         return calculate_rmsd(reference_atoms, current_backbone);
     }
 
+    std::vector<RMSFData> calculateRMSF() {
+        std::vector<RMSFData> rmsf_results;
+        
+        if (frames.empty()) {
+            return rmsf_results;
+        }
+
+        // Get all unique residues from the first frame
+        std::map<int, std::string> residue_map;
+        for (size_t i = 0; i < frames[0].size(); ++i) {
+            auto& res = frames[0][i];
+            residue_map[res.resid] = res.resname;
+        }
+
+        // For each residue, calculate RMSF
+        for (const auto& residue_pair : residue_map) {
+            int resid = residue_pair.first;
+            std::string resname = residue_pair.second;
+            
+            // Collect CA atom positions for this residue across all frames
+            std::vector<std::vector<double>> ca_positions; // [frame][x,y,z]
+            
+            for (size_t frame_idx = 0; frame_idx < frames.size(); ++frame_idx) {
+                // Find the residue in this frame
+                for (size_t res_idx = 0; res_idx < frames[frame_idx].size(); ++res_idx) {
+                    auto& res = frames[frame_idx][res_idx];
+                    if (res.resid == resid) {
+                        // Find CA atom
+                        Atom* ca_atom = find_atom(res, "CA");
+                        if (ca_atom) {
+                            ca_positions.push_back({ca_atom->x, ca_atom->y, ca_atom->z});
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if (ca_positions.size() < 2) {
+                // Not enough data for RMSF calculation
+                rmsf_results.push_back({resid, resname, 0.0});
+                continue;
+            }
+
+            // Calculate mean position
+            double mean_x = 0.0, mean_y = 0.0, mean_z = 0.0;
+            for (const auto& pos : ca_positions) {
+                mean_x += pos[0];
+                mean_y += pos[1];
+                mean_z += pos[2];
+            }
+            mean_x /= ca_positions.size();
+            mean_y /= ca_positions.size();
+            mean_z /= ca_positions.size();
+
+            // Calculate RMSF
+            double sum_squared_diff = 0.0;
+            for (const auto& pos : ca_positions) {
+                double dx = pos[0] - mean_x;
+                double dy = pos[1] - mean_y;
+                double dz = pos[2] - mean_z;
+                sum_squared_diff += dx * dx + dy * dy + dz * dz;
+            }
+
+            double rmsf = sqrt(sum_squared_diff / ca_positions.size());
+            rmsf_results.push_back({resid, resname, rmsf});
+        }
+
+        return rmsf_results;
+    }
+
     AnalysisData calculateAll(int target_resid, int frame_idx) {
         AnalysisData data = { 0.0, 0.0, 0.0 };
-
+        
         // Calculate dihedrals
         DihedralAngles angles = calculateDihedrals(target_resid, frame_idx);
         data.phi = angles.phi;
         data.psi = angles.psi;
-
+        
         // Calculate RMSD
         data.rmsd = calculateRMSD(frame_idx);
-
+        
         return data;
     }
 
@@ -422,6 +498,31 @@ public:
         csv_file.close();
         std::cout << "Results written to " << output_filename << std::endl;
     }
+
+    void writeRMSFCSV(const std::string& output_filename) {
+        std::ofstream csv_file(output_filename);
+        if (!csv_file.is_open()) {
+            std::cerr << "Error: Could not create RMSF output file " << output_filename << std::endl;
+            return;
+        }
+
+        std::cout << "Calculating RMSF for all residues..." << std::endl;
+        std::vector<RMSFData> rmsf_data = calculateRMSF();
+
+        // Write header
+        csv_file << "residue,resname,rmsf_angstrom\n";
+
+        // Write RMSF data
+        for (const auto& rmsf : rmsf_data) {
+            csv_file << rmsf.resid << ","
+                << rmsf.resname << ","
+                << std::fixed << std::setprecision(3) << rmsf.rmsf << "\n";
+        }
+
+        csv_file.close();
+        std::cout << "RMSF results written to " << output_filename << std::endl;
+        std::cout << "Calculated RMSF for " << rmsf_data.size() << " residues." << std::endl;
+    }
 };
 
 int main() {
@@ -447,17 +548,25 @@ int main() {
         return 1;
     }
 
-    // Generate output filename
-    std::string output_filename = pdb_filename;
-    size_t dot_pos = output_filename.find_last_of('.');
+    // Generate output filenames
+    std::string base_filename = pdb_filename;
+    size_t dot_pos = base_filename.find_last_of('.');
     if (dot_pos != std::string::npos) {
-        output_filename = output_filename.substr(0, dot_pos);
+        base_filename = base_filename.substr(0, dot_pos);
     }
-    output_filename += "_res" + std::to_string(target_residue) + "_analysis.csv";
+    
+    std::string analysis_filename = base_filename + "_res" + std::to_string(target_residue) + "_analysis.csv";
+    std::string rmsf_filename = base_filename + "_rmsf.csv";
 
     // Calculate dihedrals and RMSD, then write to CSV
-    reader.writeCSV(output_filename, target_residue, timestep_ps);
+    reader.writeCSV(analysis_filename, target_residue, timestep_ps);
+
+    // Calculate RMSF and write to separate CSV
+    reader.writeRMSFCSV(rmsf_filename);
 
     std::cout << "Analysis complete!" << std::endl;
+    std::cout << "Files created:" << std::endl;
+    std::cout << "  - " << analysis_filename << " (dihedrals and RMSD over time)" << std::endl;
+    std::cout << "  - " << rmsf_filename << " (per-residue RMSF)" << std::endl;
     return 0;
 }
