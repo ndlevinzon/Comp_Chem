@@ -44,6 +44,13 @@ struct RMSFData {
     double rmsf;
 };
 
+struct PCAData {
+    int component;
+    double eigenvalue;
+    double variance_explained;
+    std::vector<double> eigenvector;
+};
+
 class PDBReader {
 private:
     std::vector<std::vector<Residue>> frames;
@@ -143,7 +150,7 @@ private:
     // Helper function to get all backbone atoms from a frame
     std::vector<Atom> get_backbone_atoms(int frame_idx) {
         std::vector<Atom> backbone_atoms;
-        
+
         if (frame_idx >= static_cast<int>(frames.size())) {
             return backbone_atoms;
         }
@@ -383,7 +390,7 @@ public:
 
     std::vector<RMSFData> calculateRMSF() {
         std::vector<RMSFData> rmsf_results;
-        
+
         if (frames.empty()) {
             return rmsf_results;
         }
@@ -399,10 +406,10 @@ public:
         for (const auto& residue_pair : residue_map) {
             int resid = residue_pair.first;
             std::string resname = residue_pair.second;
-            
+
             // Collect CA atom positions for this residue across all frames
             std::vector<std::vector<double>> ca_positions; // [frame][x,y,z]
-            
+
             for (size_t frame_idx = 0; frame_idx < frames.size(); ++frame_idx) {
                 // Find the residue in this frame
                 for (size_t res_idx = 0; res_idx < frames[frame_idx].size(); ++res_idx) {
@@ -411,7 +418,7 @@ public:
                         // Find CA atom
                         Atom* ca_atom = find_atom(res, "CA");
                         if (ca_atom) {
-                            ca_positions.push_back({ca_atom->x, ca_atom->y, ca_atom->z});
+                            ca_positions.push_back({ ca_atom->x, ca_atom->y, ca_atom->z });
                         }
                         break;
                     }
@@ -420,7 +427,7 @@ public:
 
             if (ca_positions.size() < 2) {
                 // Not enough data for RMSF calculation
-                rmsf_results.push_back({resid, resname, 0.0});
+                rmsf_results.push_back({ resid, resname, 0.0 });
                 continue;
             }
 
@@ -445,23 +452,194 @@ public:
             }
 
             double rmsf = sqrt(sum_squared_diff / ca_positions.size());
-            rmsf_results.push_back({resid, resname, rmsf});
+            rmsf_results.push_back({ resid, resname, rmsf });
         }
 
         return rmsf_results;
     }
 
+    std::vector<PCAData> calculatePCA() {
+        std::vector<PCAData> pca_results;
+
+        if (frames.size() < 2) {
+            std::cerr << "Error: Need at least 2 frames for PCA analysis." << std::endl;
+            return pca_results;
+        }
+
+        // Get all CA atoms from the first frame to determine structure
+        std::vector<Atom> reference_ca_atoms;
+        for (size_t i = 0; i < frames[0].size(); ++i) {
+            auto& res = frames[0][i];
+            Atom* ca_atom = find_atom(res, "CA");
+            if (ca_atom) {
+                reference_ca_atoms.push_back(*ca_atom);
+            }
+        }
+
+        if (reference_ca_atoms.empty()) {
+            std::cerr << "Error: No CA atoms found for PCA analysis." << std::endl;
+            return pca_results;
+        }
+
+        int n_atoms = static_cast<int>(reference_ca_atoms.size());
+        int n_frames = static_cast<int>(frames.size());
+        int n_coords = n_atoms * 3; // x, y, z coordinates
+
+        std::cout << "PCA Analysis: " << n_atoms << " CA atoms, " << n_frames << " frames" << std::endl;
+
+        // Step 1: Build coordinate matrix (frames x coordinates)
+        std::vector<std::vector<double>> coord_matrix(n_frames, std::vector<double>(n_coords));
+
+        for (int frame_idx = 0; frame_idx < n_frames; ++frame_idx) {
+            int coord_idx = 0;
+            for (size_t res_idx = 0; res_idx < frames[frame_idx].size(); ++res_idx) {
+                auto& res = frames[frame_idx][res_idx];
+                Atom* ca_atom = find_atom(res, "CA");
+                if (ca_atom) {
+                    coord_matrix[frame_idx][coord_idx++] = ca_atom->x;
+                    coord_matrix[frame_idx][coord_idx++] = ca_atom->y;
+                    coord_matrix[frame_idx][coord_idx++] = ca_atom->z;
+                }
+            }
+        }
+
+        // Step 2: Calculate mean coordinates
+        std::vector<double> mean_coords(n_coords, 0.0);
+        for (int frame_idx = 0; frame_idx < n_frames; ++frame_idx) {
+            for (int coord_idx = 0; coord_idx < n_coords; ++coord_idx) {
+                mean_coords[coord_idx] += coord_matrix[frame_idx][coord_idx];
+            }
+        }
+        for (int coord_idx = 0; coord_idx < n_coords; ++coord_idx) {
+            mean_coords[coord_idx] /= n_frames;
+        }
+
+        // Step 3: Center the data (subtract mean)
+        for (int frame_idx = 0; frame_idx < n_frames; ++frame_idx) {
+            for (int coord_idx = 0; coord_idx < n_coords; ++coord_idx) {
+                coord_matrix[frame_idx][coord_idx] -= mean_coords[coord_idx];
+            }
+        }
+
+        // Step 4: Calculate covariance matrix
+        std::vector<std::vector<double>> covariance_matrix(n_coords, std::vector<double>(n_coords, 0.0));
+
+        for (int i = 0; i < n_coords; ++i) {
+            for (int j = 0; j < n_coords; ++j) {
+                double sum = 0.0;
+                for (int frame_idx = 0; frame_idx < n_frames; ++frame_idx) {
+                    sum += coord_matrix[frame_idx][i] * coord_matrix[frame_idx][j];
+                }
+                covariance_matrix[i][j] = sum / (n_frames - 1);
+            }
+        }
+
+        // Step 5: Calculate eigenvalues and eigenvectors (simplified power iteration)
+        std::vector<double> eigenvalues;
+        std::vector<std::vector<double>> eigenvectors;
+
+        // Use power iteration to find the top eigenvalues/eigenvectors
+        int max_components = std::min(10, n_coords); // Limit to top 10 components
+
+        for (int comp = 0; comp < max_components; ++comp) {
+            // Initialize random eigenvector
+            std::vector<double> eigenvector(n_coords);
+            for (int i = 0; i < n_coords; ++i) {
+                eigenvector[i] = static_cast<double>(rand()) / RAND_MAX - 0.5;
+            }
+
+            // Normalize
+            double norm = 0.0;
+            for (int i = 0; i < n_coords; ++i) {
+                norm += eigenvector[i] * eigenvector[i];
+            }
+            norm = sqrt(norm);
+            for (int i = 0; i < n_coords; ++i) {
+                eigenvector[i] /= norm;
+            }
+
+            // Power iteration
+            for (int iter = 0; iter < 100; ++iter) {
+                std::vector<double> new_eigenvector(n_coords, 0.0);
+
+                // Apply covariance matrix
+                for (int i = 0; i < n_coords; ++i) {
+                    for (int j = 0; j < n_coords; ++j) {
+                        new_eigenvector[i] += covariance_matrix[i][j] * eigenvector[j];
+                    }
+                }
+
+                // Orthogonalize against previous eigenvectors
+                for (int prev_comp = 0; prev_comp < comp; ++prev_comp) {
+                    double dot_product = 0.0;
+                    for (int i = 0; i < n_coords; ++i) {
+                        dot_product += new_eigenvector[i] * eigenvectors[prev_comp][i];
+                    }
+                    for (int i = 0; i < n_coords; ++i) {
+                        new_eigenvector[i] -= dot_product * eigenvectors[prev_comp][i];
+                    }
+                }
+
+                // Normalize
+                norm = 0.0;
+                for (int i = 0; i < n_coords; ++i) {
+                    norm += new_eigenvector[i] * new_eigenvector[i];
+                }
+                norm = sqrt(norm);
+                for (int i = 0; i < n_coords; ++i) {
+                    new_eigenvector[i] /= norm;
+                }
+
+                eigenvector = new_eigenvector;
+            }
+
+            // Calculate eigenvalue
+            std::vector<double> temp(n_coords, 0.0);
+            for (int i = 0; i < n_coords; ++i) {
+                for (int j = 0; j < n_coords; ++j) {
+                    temp[i] += covariance_matrix[i][j] * eigenvector[j];
+                }
+            }
+
+            double eigenvalue = 0.0;
+            for (int i = 0; i < n_coords; ++i) {
+                eigenvalue += eigenvector[i] * temp[i];
+            }
+
+            eigenvalues.push_back(eigenvalue);
+            eigenvectors.push_back(eigenvector);
+        }
+
+        // Step 6: Calculate variance explained
+        double total_variance = 0.0;
+        for (double eigenvalue : eigenvalues) {
+            total_variance += eigenvalue;
+        }
+
+        // Step 7: Create PCA results
+        for (int comp = 0; comp < max_components; ++comp) {
+            PCAData pca_data;
+            pca_data.component = comp + 1;
+            pca_data.eigenvalue = eigenvalues[comp];
+            pca_data.variance_explained = eigenvalues[comp] / total_variance * 100.0;
+            pca_data.eigenvector = eigenvectors[comp];
+            pca_results.push_back(pca_data);
+        }
+
+        return pca_results;
+    }
+
     AnalysisData calculateAll(int target_resid, int frame_idx) {
         AnalysisData data = { 0.0, 0.0, 0.0 };
-        
+
         // Calculate dihedrals
         DihedralAngles angles = calculateDihedrals(target_resid, frame_idx);
         data.phi = angles.phi;
         data.psi = angles.psi;
-        
+
         // Calculate RMSD
         data.rmsd = calculateRMSD(frame_idx);
-        
+
         return data;
     }
 
@@ -523,6 +701,80 @@ public:
         std::cout << "RMSF results written to " << output_filename << std::endl;
         std::cout << "Calculated RMSF for " << rmsf_data.size() << " residues." << std::endl;
     }
+
+    void writePCACSV(const std::string& output_filename) {
+        std::ofstream csv_file(output_filename);
+        if (!csv_file.is_open()) {
+            std::cerr << "Error: Could not create PCA output file " << output_filename << std::endl;
+            return;
+        }
+
+        std::cout << "Calculating Principal Components..." << std::endl;
+        std::vector<PCAData> pca_data = calculatePCA();
+
+        if (pca_data.empty()) {
+            std::cerr << "Error: No PCA data generated." << std::endl;
+            return;
+        }
+
+        // Write header
+        csv_file << "component,eigenvalue,variance_explained_percent\n";
+
+        // Write PCA summary data
+        for (const auto& pca : pca_data) {
+            csv_file << pca.component << ","
+                << std::fixed << std::setprecision(6) << pca.eigenvalue << ","
+                << std::fixed << std::setprecision(3) << pca.variance_explained << "\n";
+        }
+
+        csv_file.close();
+        std::cout << "PCA results written to " << output_filename << std::endl;
+        std::cout << "Calculated " << pca_data.size() << " principal components." << std::endl;
+
+        // Print summary
+        std::cout << "\nPCA Summary:" << std::endl;
+        double cumulative_variance = 0.0;
+        for (const auto& pca : pca_data) {
+            cumulative_variance += pca.variance_explained;
+            std::cout << "PC" << pca.component << ": "
+                << std::fixed << std::setprecision(3) << pca.variance_explained
+                << "% variance (cumulative: " << cumulative_variance << "%)" << std::endl;
+        }
+    }
+
+    void writePCAEigenvectorsCSV(const std::string& output_filename) {
+        std::ofstream csv_file(output_filename);
+        if (!csv_file.is_open()) {
+            std::cerr << "Error: Could not create PCA eigenvectors output file " << output_filename << std::endl;
+            return;
+        }
+
+        std::vector<PCAData> pca_data = calculatePCA();
+
+        if (pca_data.empty()) {
+            std::cerr << "Error: No PCA data generated." << std::endl;
+            return;
+        }
+
+        // Write header
+        csv_file << "component,atom_index,coordinate,eigenvector_value\n";
+
+        // Write eigenvector data
+        for (const auto& pca : pca_data) {
+            for (size_t i = 0; i < pca.eigenvector.size(); ++i) {
+                int atom_index = static_cast<int>(i / 3) + 1; // 1-based atom index
+                std::string coordinate = (i % 3 == 0) ? "x" : (i % 3 == 1) ? "y" : "z";
+
+                csv_file << pca.component << ","
+                    << atom_index << ","
+                    << coordinate << ","
+                    << std::fixed << std::setprecision(6) << pca.eigenvector[i] << "\n";
+            }
+        }
+
+        csv_file.close();
+        std::cout << "PCA eigenvectors written to " << output_filename << std::endl;
+    }
 };
 
 int main() {
@@ -554,9 +806,11 @@ int main() {
     if (dot_pos != std::string::npos) {
         base_filename = base_filename.substr(0, dot_pos);
     }
-    
+
     std::string analysis_filename = base_filename + "_res" + std::to_string(target_residue) + "_analysis.csv";
     std::string rmsf_filename = base_filename + "_rmsf.csv";
+    std::string pca_filename = base_filename + "_pca.csv";
+    std::string pca_eigenvectors_filename = base_filename + "_pca_eigenvectors.csv";
 
     // Calculate dihedrals and RMSD, then write to CSV
     reader.writeCSV(analysis_filename, target_residue, timestep_ps);
@@ -564,9 +818,15 @@ int main() {
     // Calculate RMSF and write to separate CSV
     reader.writeRMSFCSV(rmsf_filename);
 
+    // Calculate PCA and write to separate CSV files
+    reader.writePCACSV(pca_filename);
+    reader.writePCAEigenvectorsCSV(pca_eigenvectors_filename);
+
     std::cout << "Analysis complete!" << std::endl;
     std::cout << "Files created:" << std::endl;
     std::cout << "  - " << analysis_filename << " (dihedrals and RMSD over time)" << std::endl;
     std::cout << "  - " << rmsf_filename << " (per-residue RMSF)" << std::endl;
+    std::cout << "  - " << pca_filename << " (PCA eigenvalues and variance)" << std::endl;
+    std::cout << "  - " << pca_eigenvectors_filename << " (PCA eigenvectors)" << std::endl;
     return 0;
 }
