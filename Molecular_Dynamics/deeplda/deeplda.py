@@ -230,7 +230,7 @@ def feature_importance_from_W(W_mean: np.ndarray, feat_names: List[str]) -> pd.D
 
 
 
-# ----------------------------- grouping (same syntax as your deeplda) -----------------------------
+# ----------------------------- grouping -----------------------------
 def parse_set_token(tok: str) -> Tuple[str, str, str, List[str] | None]:
     parts = tok.split("|")
     if len(parts) not in (3, 4):
@@ -295,7 +295,7 @@ def build_group_labels(df: pd.DataFrame, set_tokens: List[str]) -> pd.DataFrame:
 
 
 
-# ----------------------------- plotting (same as your style) -----------------------------
+# ----------------------------- plotting -----------------------------
 def compute_cv1_scores(X: np.ndarray, y: np.ndarray,
                        model_name: str, W_mean: np.ndarray,
                        class_names: List[str]) -> Tuple[np.ndarray, str]:
@@ -397,7 +397,7 @@ def plot_topk_bar(imp_df: pd.DataFrame, out_png: str, k: int = 20, title: str = 
     print(f"[plot] wrote: {out_png}")
 
 
-# ------------------- greedy subset (same idea as your dihedral code) -------------------
+# ------------------- greedy subset -------------------
 def _cv_accuracy_for_subset(X: np.ndarray, y: np.ndarray, groups: np.ndarray,
                             cols: List[int], seed: int = 42, n_splits: int = 3) -> float:
     Xs = X[:, cols]
