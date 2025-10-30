@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grocharmm"
+version = "0.1.0"
+description = "GRO to CHARMM-Drude File Editor"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "parmed",
+    "tkinter"
+]
+
+[project.scripts]
+grocharmm-gui = "scripts.gui_editor:main"
+
+[tool.setuptools.packages.find]
+exclude = ["tests*"]
