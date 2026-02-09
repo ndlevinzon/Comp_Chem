@@ -1,0 +1,10 @@
+Seed MIN for chi {TARGET_DEG}
+&cntrl
+  imin=1, maxcyc=5000, ncyc=2000,
+  ntb=1, cut=10.0,
+  ntpr=100,
+  nmropt=1,
+/
+&wt type='END' /
+DISANG=disang_seed_{TARGET_TAG}.RST
+DUMPAVE=seed_min_{TARGET_TAG}.dat
