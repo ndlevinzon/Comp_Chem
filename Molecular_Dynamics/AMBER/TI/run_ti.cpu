@@ -1,0 +1,168 @@
+#!/bin/bash
+#SBATCH --job-name=mg_ti
+#SBATCH --time=24:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=96
+#SBATCH --cpus-per-task=1
+#SBATCH --account=cheatham
+#SBATCH --partition=granite
+#SBATCH --qos=granite
+#SBATCH --output=slurm/mg_ti_%A_%a.out
+#SBATCH --error=slurm/mg_ti_%A_%a.err
+set -e
+set -o pipefail
+set -x
+
+module load gcc/11.2.0
+module load openmpi/5.0.3
+
+export AMBERHOME="/uufs/chpc.utah.edu/sys/installdir/r8/amber/24"
+export runpmemd="$AMBERHOME/bin/sander.mpi"
+
+cd "$SLURM_SUBMIT_DIR"
+mkdir -p slurm
+
+# --------------------------------------------------
+# USER SETTINGS
+# --------------------------------------------------
+
+LEGS=("01_charge_off" "02_vdw_off")
+
+WINDOW_LIST="window_list.txt"
+
+# Completion rule:
+# edit these if your run_window.sh writes different final files.
+COMPLETION_FILES=(
+    "prod.rst7"
+    "prod.nc"
+    "prod.out"
+)
+
+# --------------------------------------------------
+# FUNCTION: determine whether a window is complete
+# --------------------------------------------------
+
+is_complete() {
+    local dir="$1"
+
+    for f in "${COMPLETION_FILES[@]}"; do
+        if [ ! -s "$dir/$f" ]; then
+            return 1
+        fi
+    done
+
+    # Optional stricter check: prod.out must contain normal termination
+    if [ -f "$dir/prod.out" ]; then
+        if ! grep -qi "Total wall time" "$dir/prod.out"; then
+            return 1
+        fi
+    fi
+
+    return 0
+}
+
+# --------------------------------------------------
+# MASTER TASK BUILDS WINDOW LIST AND RESUBMITS ARRAY
+# --------------------------------------------------
+
+if [ -z "${SLURM_ARRAY_TASK_ID:-}" ]; then
+
+    echo "========================================"
+    echo "Building incomplete window list"
+    echo "Submit directory: $SLURM_SUBMIT_DIR"
+    echo "========================================"
+
+    rm -f "$WINDOW_LIST"
+
+    for LEG in "${LEGS[@]}"; do
+
+        if [ ! -d "$LEG" ]; then
+            echo "WARNING: Missing leg directory: $LEG"
+            continue
+        fi
+
+        for LAMDIR in $(find "$LEG" -maxdepth 1 -type d -name "lambda_*" | sort -V); do
+
+            if is_complete "$LAMDIR"; then
+                echo "Complete, skipping: $LAMDIR"
+            else
+                echo "$LAMDIR" >> "$WINDOW_LIST"
+                echo "Incomplete, adding: $LAMDIR"
+            fi
+
+        done
+    done
+
+    if [ ! -s "$WINDOW_LIST" ]; then
+        echo "All windows appear complete. Nothing to submit."
+        exit 0
+    fi
+
+    N_WINDOWS=$(wc -l < "$WINDOW_LIST")
+
+    echo "========================================"
+    echo "Incomplete windows found: $N_WINDOWS"
+    echo "Submitting array: 1-${N_WINDOWS}%64"
+    echo "========================================"
+
+    sbatch --array=1-${N_WINDOWS}%64 "$0"
+
+    exit 0
+fi
+
+# --------------------------------------------------
+# ARRAY TASK: RUN ONE WINDOW
+# --------------------------------------------------
+
+if [ ! -f "$WINDOW_LIST" ]; then
+    echo "ERROR: $WINDOW_LIST not found."
+    exit 1
+fi
+
+N_WINDOWS=$(wc -l < "$WINDOW_LIST")
+
+if [ "$SLURM_ARRAY_TASK_ID" -gt "$N_WINDOWS" ]; then
+    echo "Task ID exceeds window count. Exiting."
+    exit 0
+fi
+
+WINDOW_DIR=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$WINDOW_LIST")
+
+echo "========================================"
+echo "Mg2+ TI array task"
+echo "Array job ID: $SLURM_ARRAY_JOB_ID"
+echo "Array task ID: $SLURM_ARRAY_TASK_ID"
+echo "Window directory: $WINDOW_DIR"
+echo "CPUs per task: $SLURM_CPUS_PER_TASK"
+echo "========================================"
+
+if [ ! -d "$WINDOW_DIR" ]; then
+    echo "ERROR: Directory not found: $WINDOW_DIR"
+    exit 1
+fi
+
+if is_complete "$WINDOW_DIR"; then
+    echo "Window already complete at runtime, skipping: $WINDOW_DIR"
+    exit 0
+fi
+
+cd "$WINDOW_DIR"
+
+if [ ! -f "run_window.sh" ]; then
+    echo "ERROR: run_window.sh not found in $WINDOW_DIR"
+    exit 1
+fi
+
+chmod +x run_window.sh
+
+echo "Running window: $WINDOW_DIR"
+bash run_window.sh
+
+cd "$SLURM_SUBMIT_DIR"
+
+if is_complete "$WINDOW_DIR"; then
+    echo "Finished and verified complete: $WINDOW_DIR"
+else
+    echo "WARNING: Finished but completion files/check failed: $WINDOW_DIR"
+    exit 2
+fi
