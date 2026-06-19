@@ -1,0 +1,27 @@
+parm ../../build/tip4p_slab.prmtop
+trajin ../r1/cool_prod/TRAJ/traj.* 1 10
+trajin ../r2/cool_prod/TRAJ/traj.* 1 10
+trajin ../r3/cool_prod/TRAJ/traj.* 1 10
+
+# Keep waters whole, but do not over-process the slab
+autoimage
+
+# Remove bulk translational drift of the slab
+center :WAT mass origin
+
+# Put the centered slab back into the primary unit cell
+image origin center familiar
+
+trajout cool_prod_centered_slab.nc netcdf
+
+# Oxygen number density along z
+density out cool_water_O_number_density_z.dat name WAT_O z number delta 0.25 :WAT@O
+
+# Mass density along z
+density out cool_water_mass_density_z.dat name WAT_mass z mass delta 0.25 :WAT
+
+# Charge density along z
+density out cool_charge_density_z.dat name charge_z z charge delta 0.25 :WAT
+
+run
+quit
